@@ -1,0 +1,13 @@
+disease_id,name_ko,grade,surveillance,kcd,report_deadline,scope_patient,scope_suspected,scope_carrier,pathogen_type,pathogen,transmission,vector,nip_vaccine,wiki_title,source_url,collected_at
+inf_0001,에볼라바이러스병,1,전수,A98.4,즉시,O,O,X,바이러스,에볼라바이러스,,,,에볼라바이러스병,https://dportal.kdca.go.kr/pot/ii/sttyInftnsds/sttyInftnsds.do,
+inf_0002,마버그열,1,전수,A98.3,즉시,O,O,X,바이러스,마버그바이러스,,,,,https://dportal.kdca.go.kr/pot/ii/sttyInftnsds/sttyInftnsds.do,
+inf_0003,라싸열,1,전수,A96.2,즉시,O,O,X,바이러스,라싸바이러스,,,,,https://dportal.kdca.go.kr/pot/ii/sttyInftnsds/sttyInftnsds.do,
+inf_0004,크리미안콩고출혈열,1,전수,A98.0,즉시,O,O,X,바이러스,크리미안콩고출혈열 바이러스,,,,,https://dportal.kdca.go.kr/pot/ii/sttyInftnsds/sttyInftnsds.do,
+inf_0005,남아메리카출혈열,1,전수,"A96.0, A96.1, A96.8",즉시,O,O,X,바이러스,,,,,,https://dportal.kdca.go.kr/pot/ii/sttyInftnsds/sttyInftnsds.do,
+inf_0006,리프트밸리열,1,전수,A92.4,즉시,O,O,X,바이러스,리프트밸리열 바이러스,,,,,https://dportal.kdca.go.kr/pot/ii/sttyInftnsds/sttyInftnsds.do,
+inf_0007,두창,1,전수,B03,즉시,O,O,X,바이러스,두창바이러스,,,,,https://dportal.kdca.go.kr/pot/ii/sttyInftnsds/sttyInftnsds.do,
+inf_0008,페스트,1,전수,"A20.0~A20.3, A20.7~A20.9, A20",즉시,O,O,X,세균,페스트균,,,,,https://dportal.kdca.go.kr/pot/ii/sttyInftnsds/sttyInftnsds.do,
+inf_0009,탄저,1,전수,"A22.0~A22.2, A22.7~A22.9, A22",즉시,O,O,X,세균,탄저균,,,,,https://dportal.kdca.go.kr/pot/ii/sttyInftnsds/sttyInftnsds.do,
+inf_0010,보툴리눔독소증,1,전수,A05.1,즉시,O,O,X,세균,보툴리눔균,,,,,https://dportal.kdca.go.kr/pot/ii/sttyInftnsds/sttyInftnsds.do,
+inf_0011,야토병,1,전수,"A21.0~A21.3, A21.7~A21.9, A21",즉시,O,O,X,세균,야토병균,,,,,https://dportal.kdca.go.kr/pot/ii/sttyInftnsds/sttyInftnsds.do,
+inf_0012,신종감염병증후군,1,전수,,즉시,O,O,X,,,,,,,https://dportal.kdca.go.kr/pot/ii/sttyInftnsds/sttyInftnsds.do,

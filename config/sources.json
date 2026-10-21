@@ -1,0 +1,109 @@
+{
+  "_comment": "수집 출처 등록부. endpoint의 TODO는 공공데이터포털 '활용신청' 상세 화면의 요청주소·요청변수로 채운다. license는 내려받기·신청 화면의 표기를 그대로 옮긴다 (NF2007).",
+  "sources": [
+    {
+      "id": "quarantine_area",
+      "name": "질병관리청_검역관리지역정보",
+      "kind": "api",
+      "status": "core",
+      "purpose": "여행지 10개국 × 감염병 매핑",
+      "page": "https://kdca.go.kr/kdca/2784/subview.do",
+      "license": "TODO: 활용신청 화면에서 확인",
+      "api": {
+        "endpoint": "TODO",
+        "key_param": "serviceKey",
+        "page_param": "pageNo",
+        "size_param": "numOfRows",
+        "page_size": 100,
+        "params": {"type": "json"}
+      }
+    },
+    {
+      "id": "notifiable_incidence",
+      "name": "질병관리청_전수신고 감염병 발생현황",
+      "kind": "api",
+      "status": "partial",
+      "purpose": "감염지역별(국내·국외) 발생현황 → 여행 기능 보강",
+      "page": "https://www.data.go.kr/data/15139178/openapi.do",
+      "license": "공공저작물_출처표시 + 상업적 이용금지 + 변경금지",
+      "api": {
+        "endpoint": "TODO: 감염지역별 발생현황 오퍼레이션 요청주소",
+        "key_param": "serviceKey",
+        "page_param": "pageNo",
+        "size_param": "numOfRows",
+        "page_size": 100,
+        "params": {"type": "json"}
+      }
+    },
+    {
+      "id": "vaccination_target",
+      "name": "질병관리청_예방접종(대상 감염병 관련) 정보",
+      "kind": "api",
+      "status": "conditional",
+      "purpose": "접종 대상 여부 메타데이터, 연령별 접종 안내 (응답에 접종 시기가 있으면 PDF 대신 사용)",
+      "page": "https://kdca.go.kr/kdca/2784/subview.do",
+      "license": "TODO: 활용신청 화면에서 확인",
+      "api": {
+        "endpoint": "TODO",
+        "key_param": "serviceKey",
+        "page_param": "pageNo",
+        "size_param": "numOfRows",
+        "page_size": 100,
+        "params": {"type": "json"}
+      }
+    },
+    {
+      "id": "age_sex_incidence",
+      "name": "성별 연령별 감염병 발생현황 (연도별 기간별) 통계",
+      "kind": "csv",
+      "status": "core",
+      "purpose": "연령별 안내 (1~3급, 전수감시)",
+      "page": "https://dportal.kdca.go.kr (감염병통계 > 전수신고 감염병)",
+      "license": "TODO: 내려받기 화면에서 확인",
+      "file_glob": "age_sex_*.csv"
+    },
+    {
+      "id": "sentinel",
+      "name": "법정감염병 표본감시 통계",
+      "kind": "csv",
+      "status": "core",
+      "purpose": "연령별·추이 안내 (4급, 표본감시)",
+      "page": "https://dportal.kdca.go.kr (감염병통계 > 표본감시 감염병)",
+      "license": "TODO: 내려받기 화면에서 확인",
+      "file_glob": "sentinel_*.csv"
+    },
+    {
+      "id": "flu_rsv_age",
+      "name": "질병관리청_연령별 인플루엔자 및 RSV바이러스 검출률",
+      "kind": "csv",
+      "status": "supplement",
+      "purpose": "4급 대표 감염병의 연령 근거",
+      "page": "https://www.data.go.kr/data/15152509/fileData.do",
+      "license": "TODO: 내려받기 화면에서 확인",
+      "file_glob": "flu_rsv_*.csv"
+    },
+    {
+      "id": "disease_incidence",
+      "name": "질병별 감염병 발생현황 (연도별 월별 기간별) 통계",
+      "kind": "csv",
+      "status": "optional",
+      "purpose": "메타데이터 보강 (최근 연간 발생 건수)",
+      "page": "https://www.data.go.kr/dcat/metadata/15053804",
+      "license": "TODO: 내려받기 화면에서 확인",
+      "file_glob": "disease_*.csv"
+    },
+    {
+      "id": "korean_wikipedia",
+      "name": "한국어 위키백과",
+      "kind": "wiki",
+      "status": "core",
+      "purpose": "감염병·병원체 설명 문서",
+      "page": "https://ko.wikipedia.org/w/api.php",
+      "license": "CC BY-SA 4.0"
+    }
+  ],
+  "excluded": [
+    {"name": "지역별 감염병 발생현황 (CSV)", "reason": "국내 시·도 단위라 해외 10개국 기능과 맞지 않음"},
+    {"name": "전국 예방접종률 정보 (PDF)", "reason": "3세 아동 집단 통계라 개인 안내와 연결이 약하고 표 파싱 비용이 큼"}
+  ]
+}
