@@ -2,6 +2,8 @@
   "_comment": "검색·생성 품질에 영향을 주는 값. 코드 수정 없이 여기서 바꾸고 비교한다 (F2005, F2006, F2014).",
 
   "chat_model": "gpt-4.1-mini",
+  "_aux_model": "검색어 추출·후보 선별에 쓸 가벼운 모델. 비우면 chat_model (scripts/bench_chat.py로 비교)",
+  "aux_model": "",
   "embedding_model": "text-embedding-3-small",
   "_embedding_raw_text": "auto = OPENAI_BASE_URL(GMS 등 프록시)이 있으면 토큰 배열 대신 원문 전송. true/false로 강제 가능",
   "embedding_raw_text": "auto",
@@ -20,6 +22,15 @@
   "max_selected_per_query": 2,
 
   "condition_candidates": 20,
+
+  "_speed": "답변 속도 (docs/PERFORMANCE.md). collect_policy: always | when_needed | background",
+  "collect_policy": "background",
+  "min_docs_for_fast": 1,
+  "parallel_collect": true,
+  "stream_answer": true,
+  "answer_cache": true,
+  "_summary_llm": "질문하기 페이지 오른쪽 요약을 LLM으로 (false면 답의 '핵심 답변'으로, LLM 호출 없음)",
+  "summary_llm": false,
 
   "meta_collection": "disease_meta",
   "docs_collection": "disease_docs",

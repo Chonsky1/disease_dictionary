@@ -27,6 +27,8 @@ CSV = paths.DISEASES_CSV
 def tmp_settings(tmp: Path, **kw) -> dict:
     s = paths.load_rag_settings(**kw)
     s["chroma_dir"] = str(tmp / "chroma")
+    s.setdefault("collect_policy", "always")
+    s["collect_policy"] = kw.get("collect_policy", "always")   # 명세 4.2 검증: 질문마다 검색어 추출·수집
     return s
 
 

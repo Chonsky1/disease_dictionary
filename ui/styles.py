@@ -1,4 +1,4 @@
-"""화면 스타일 (다크 테마): 숨김 목차 바, 홈 인트로, 검색창, 지구본·나라 팝업, 상세보기 인포그래픽, 애니메이션.
+"""화면 스타일 (다크 테마): 목차 바, 홈 인트로, 검색창, 지구본·나라 팝업, 상세보기 인포그래픽, 애니메이션.
 
 Streamlit의 st-key-<key> 클래스로 컨테이너를 꾸민다. 키가 바뀌면 새 요소로 그려지므로
 나라 팝업(country_panel_<나라>), 상세 인포그래픽(detail_info_<감염병>), 차트(key에 조건 포함)는
@@ -19,26 +19,21 @@ CSS = """
 html { scroll-behavior: smooth; }
 /* Streamlit 기본 헤더(툴바)는 목차 바와 겹치므로 숨긴다. 다시 실행은 키보드 R. */
 [data-testid="stHeader"] { display: none; }
-.block-container { padding-top: 3.6rem; max-width: 1180px; }
+.block-container { padding-top: 4.4rem; max-width: 1180px; }
 
-/* ---- 목차 바: 로고만 보이다가, 로고 근처에 마우스를 올리면 테두리 없는 글자 목차가 나타남 ---- */
-.st-key-kd_nav { position: fixed; top: 0; left: 0; z-index: 1000000; width: auto !important;
-  padding: 12px 28px 16px max(16px, calc((100vw - 1180px) / 2 + 16px)); border-radius: 0 0 18px 0;
-  transition: background .25s, box-shadow .25s; }
-.st-key-kd_nav:hover { background: rgba(14,20,27,.94); backdrop-filter: blur(8px); box-shadow: 0 8px 24px rgba(0,0,0,.35); }
-.st-key-kd_nav [data-testid="stPageLink"] { opacity: 0; transform: translateY(-8px); pointer-events: none;
-  transition: opacity .25s ease, transform .25s ease; }
-.st-key-kd_nav:hover [data-testid="stPageLink"] { opacity: 1; transform: none; pointer-events: auto; }
-.st-key-kd_nav:hover [data-testid="stPageLink"]:nth-of-type(2) { transition-delay: .04s; }
-.st-key-kd_nav [data-testid="stPageLink"] a { border: none !important; background: none !important; padding: 4px 6px;
+/* ---- 목차 바 (항상 보임): 로고(→ 홈) + 테두리 없는 글자 목차 --------------------------------- */
+.st-key-kd_nav { position: fixed; top: 0; left: 0; right: 0; z-index: 1000000; width: 100% !important;
+  padding: 10px max(16px, calc((100vw - 1180px) / 2 + 16px)); gap: 26px !important;
+  background: rgba(14,20,27,.92); backdrop-filter: blur(8px); border-bottom: 1px solid var(--kd-line); }
+.st-key-kd_nav [data-testid="stPageLink"] a { border: none !important; background: none !important; padding: 4px 2px;
   box-shadow: none !important; }
 .st-key-kd_nav [data-testid="stPageLink"] a p, .st-key-kd_nav [data-testid="stPageLink"] a span {
   color: var(--kd-muted) !important; font-weight: 600; font-size: .95rem; }
 .st-key-kd_nav [data-testid="stPageLink"] a:hover p { color: var(--kd-teal) !important; }
-.kd-logo { display:flex; align-items:center; gap:8px; font-weight:700; color: var(--kd-ink); font-size: 1rem; white-space: nowrap;
-  background: rgba(14,20,27,.82); backdrop-filter: blur(6px); padding: 4px 12px 4px 4px; border-radius: 12px; }
-.kd-logo-mark { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px;
-  border-radius:8px; background: var(--kd-accent); color:#fff; font-weight:800; }
+.st-key-kd_logo { margin-right: 18px; }
+.st-key-kd_logo [data-testid="stPageLink"] a p { color: var(--kd-ink) !important; font-weight: 800 !important; font-size: 1.02rem !important; }
+.st-key-kd_logo [data-testid="stPageLink"] a::before { content: "+"; display:inline-flex; align-items:center; justify-content:center;
+  width:28px; height:28px; margin-right: 8px; border-radius:8px; background: var(--kd-accent); color:#fff; font-weight:800; }
 
 /* ---- 공통 글자·카드 ----------------------------------------------------------------- */
 .kd-page-title { font-size: 1.7rem; font-weight: 800; color: var(--kd-ink); margin: .6rem 0 .4rem; }
@@ -80,6 +75,40 @@ html { scroll-behavior: smooth; }
   box-shadow: 0 16px 40px rgba(0,0,0,.45); }
 [class*="st-key-country_panel"] button[kind="secondary"]:has(p:only-child) { min-height: 0; }
 .kd-country-name { font-size: 1.5rem; font-weight: 700; color: var(--kd-ink); margin-bottom: .2rem; }
+
+/* ---- 감염병 질문하기·답변 카드 ----------------------------------------------------------- */
+.kd-target-name { font-size: 2.4rem; font-weight: 800; color: var(--kd-ink); letter-spacing: -.02em; line-height: 1.15; }
+.kd-target-meta { margin: .45rem 0 .2rem; }
+.st-key-chat_card { padding: 10px 14px 12px; }
+.st-key-chat_card [data-testid="stChatMessage"] { background: transparent; padding: .4rem .2rem; }
+.st-key-chat_card [data-testid="stChatMessage"] p, .st-key-detail_chat [data-testid="stChatMessage"] p { font-size: 1rem; line-height: 1.65; }
+.kd-core { background: rgba(69,220,200,.10); border: 1px solid rgba(69,220,200,.30); border-radius: 14px;
+  padding: 12px 16px; margin: .2rem 0 .7rem; font-size: 1.05rem; line-height: 1.6; color: var(--kd-ink); }
+[class*="st-key-cat_"] { background: var(--kd-surface-2); border: 1px solid var(--kd-line); border-radius: 14px;
+  padding: 10px 14px 20px; min-height: 100%; height: auto !important; overflow: visible; animation: kdFade .5s ease-out both; }
+[class*="st-key-cat_"] ul { margin: 0; padding-left: 1.1rem; }
+[class*="st-key-cat_"] [data-testid="stMarkdownContainer"] { overflow: visible; }
+[class*="st-key-cat_"] li { font-size: .95rem; line-height: 1.55; margin-bottom: .15rem; }
+.kd-cat-title { font-weight: 700; color: var(--kd-teal); font-size: .95rem; margin-bottom: .25rem; }
+.kd-cite { color: var(--kd-muted); font-size: .75rem; white-space: nowrap; }
+.kd-timing { color: var(--kd-muted); font-size: .78rem; margin: .3rem 0 .2rem; }
+.st-key-chat_summary .stMarkdown p, .st-key-chat_summary li { font-size: .92rem; line-height: 1.55; }
+.st-key-detail_chat { max-width: 980px; }
+[data-testid="InputInstructions"] { display: none !important; }   /* 'Press Enter to submit form' 숨김 */
+.st-key-big_search [data-testid="stTextInputRootElement"], .st-key-home_search [data-testid="stTextInputRootElement"] {
+  border-radius: 999px !important; overflow: hidden; }
+.st-key-big_search input { border-radius: 999px !important; height: 66px; padding-left: 28px !important;
+  font-size: 1.15rem !important; background: #1b2733 !important; }
+.st-key-big_search [data-testid="stTextInputRootElement"], .st-key-big_search [data-baseweb="input"],
+.st-key-big_search [data-baseweb="base-input"] { height: 66px !important; min-height: 66px; }
+.st-key-home_search [data-testid="stTextInputRootElement"], .st-key-home_search [data-baseweb="input"],
+.st-key-home_search [data-baseweb="base-input"] { height: 54px !important; min-height: 54px; }
+.st-key-big_search input, .st-key-home_search input { height: 100% !important; }
+.st-key-big_search [data-baseweb="input"], .st-key-big_search [data-baseweb="base-input"] {
+  border-radius: 999px !important; background: #1b2733 !important; border-color: #33475a !important;
+  box-shadow: 0 8px 26px rgba(0,0,0,.4); }
+.st-key-big_search [data-baseweb="input"]:focus-within { border-color: var(--kd-teal) !important; }
+.st-key-big_search button { border-radius: 999px !important; height: 66px; font-size: 1.3rem; }
 
 /* ---- 연령별 페이지 ---------------------------------------------------------------- */
 [class*="st-key-age_panel"] { border: 1px solid #355066; border-radius: 22px; padding: 16px 16px 8px;

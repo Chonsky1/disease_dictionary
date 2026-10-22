@@ -6,7 +6,7 @@
   detail.py  감염병 상세보기: 설명 + 연령·성별 인포그래픽 + 챗봇에게 물어보기 (목차에는 숨김)
   age.py     연령별 알아보기: 연령대별 상위 감염병, 감염병별 연령 분포, 유행 시기
 
-목차 바: 화면 맨 위 로고 근처에 마우스를 가져가면 나타난다 (ui/styles.py).
+목차 바: 화면 맨 위에 항상 보이며, 로고를 누르면 홈으로 간다 (ui/styles.py).
 실행: streamlit run ui/app.py   (프로젝트 폴더에서 실행해야 .streamlit/config.toml의 다크 테마가 적용됨)
 """
 from __future__ import annotations
@@ -33,17 +33,17 @@ setup_logging()
 st.markdown(CSS, unsafe_allow_html=True)
 
 pages = {
-    "home": st.Page(PAGE_HOME, title="나라별 주의 감염병", icon="🌏", default=True),
-    "chat": st.Page(PAGE_CHAT, title="감염병 질문하기", icon="💬", url_path="chat"),
-    "age": st.Page(PAGE_AGE, title="연령별 알아보기", icon="📊", url_path="age"),
-    "detail": st.Page(PAGE_DETAIL, title="감염병 상세보기", icon="🔎", url_path="detail"),
+    "home": st.Page(PAGE_HOME, title="나라별 주의 감염병", default=True),
+    "chat": st.Page(PAGE_CHAT, title="감염병 질문하기", url_path="chat"),
+    "age": st.Page(PAGE_AGE, title="연령별 알아보기", url_path="age"),
+    "detail": st.Page(PAGE_DETAIL, title="감염병 상세보기", url_path="detail"),
 }
 nav = st.navigation(list(pages.values()), position="hidden")
 
-# ---- 목차 바: 로고는 항상 보이고, 로고 근처에 마우스를 올리면 글자 목차가 나타난다 ---------------
+# ---- 목차 바 (항상 보임): 로고를 누르면 홈, 테두리 없는 글자 목차 ------------------------------------
 with st.container(key="kd_nav", horizontal=True, vertical_alignment="center", gap="medium"):
-    st.markdown("<span class='kd-logo'><span class='kd-logo-mark'>+</span>법정감염병 안내</span>",
-                unsafe_allow_html=True)
+    with st.container(key="kd_logo", width="content"):
+        st.page_link(pages["home"], label="법정감염병 안내")
     for k in ("home", "chat", "age"):
         st.page_link(pages[k], label=pages[k].title)
 

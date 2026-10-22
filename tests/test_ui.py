@@ -24,7 +24,7 @@ ENV = {"OPENAI_API_KEY": "test-key", "WIKI_USER_AGENT": "kdca-rag-test (contact:
 
 
 def fake_runtime(tmp: Path, indexed: bool = True) -> Runtime:
-    settings = {**paths.load_rag_settings(), "chroma_dir": str(tmp / "chroma")}
+    settings = {**paths.load_rag_settings(), "chroma_dir": str(tmp / "chroma"), "collect_policy": "always"}
     store = DiseaseStore(settings, DeterministicFakeEmbedding(size=32))
     diseases = load_diseases(paths.DISEASES_CSV)
     if indexed:
@@ -91,8 +91,11 @@ class UiTest(_UiBase):
         self.assertRegex(texts, r"\*\*\[근거 2\]\*\* .+ · 위키백과 · \[원문\]\(https://ko\.wikipedia\.org/")
         self.assertNotIn("**[근거 3]**", texts)        # 인용되지 않은 근거는 표시하지 않음
         self.assertTrue(any("전문가의 진단" in c.value for c in at.caption))   # 면책 안내
-        self.assertIn("대화 요약", texts)
+        self.assertIn("📝 요약", texts)
         self.assertIn("- **홍역**: 홍역은 제2급 감염병이며", texts)            # 오른쪽 요약 (LLM 형식이 안 맞으면 추출 요약)
+        self.assertIn("kd-target-name", texts)                                 # 감염병 이름 크게
+        self.assertIn("⏱", texts)                                              # 답변 시간 표시
+        self.assertIn("LLM", texts)
         self.assertNotIn("[근거", at.session_state["summary"]["text"])
         # 다른 감염병 질문도 한 대화로 이어짐
         at.chat_input[0].set_value("수두는 몇 급인가요?").run()
@@ -107,7 +110,7 @@ class UiTest(_UiBase):
         at, rt = self._app()
         at.run()
         at.switch_page(CHAT).run()
-        at.radio(key="chat_view").set_value("이런 감염병 찾기").run()
+        at.segmented_control(key="chat_view").set_value("이런 감염병 찾기").run()
         at.text_input[0].set_value("1급 감염병")
         next(b for b in at.button if b.label == "찾기").click().run()   # form submit
         cards = [b for b in at.button if b.key and b.key.startswith("go_")]
@@ -133,7 +136,9 @@ class HomeTest(_UiBase):
         at, _ = self._home()
         at.run()
         html = md(at)
-        self.assertIn("kd-logo", html)                       # 목차 바 로고
+        links = at.get("page_link")
+        self.assertEqual([l.proto.label for l in links],
+                         ["법정감염병 안내", "나라별 주의 감염병", "감염병 질문하기", "연령별 알아보기"])   # 로고 → 홈
         self.assertIn("법정감염병 안내 도우미", html)
         self.assertIn("전문가의 진단", html)                   # 안내 문구
         self.assertIn("kdHeroTitle", html)                    # 첫 접속 인트로
@@ -148,7 +153,7 @@ class HomeTest(_UiBase):
         at.run()
         at.text_input[0].set_value("홍역은 어떻게 전파되나요?")
         next(b for b in at.button if b.label == "→").click().run()
-        self.assertIn("대화 요약", md(at))                     # 질문하기 페이지로 이동해 바로 답함
+        self.assertIn("📝 요약", md(at))                       # 질문하기 페이지로 이동해 바로 답함
         self.assertEqual(rt.by_id[at.session_state["disease"]].display_name, "홍역")
         self.assertEqual([m["role"] for m in at.session_state["chat_log"]], ["user", "assistant"])
         self.assertEqual(len(at.exception), 0)
@@ -213,10 +218,12 @@ class DetailTest(_UiBase):
             self.assertIn(text, html)
         self.assertEqual(len(at.get("plotly_chart")), 1)      # 인구 피라미드
         self.assertTrue(any("열 순서로 추정" in c.value for c in at.caption))
-        at.text_input[0].set_value("어떻게 예방하나요?")          # 챗봇에게 물어보기 → 질문하기 페이지
+        at.text_input[0].set_value("어떻게 예방하나요?")          # 챗봇에게 물어보기 → 이 페이지 안에서 답
         next(b for b in at.button if b.label == "→").click().run()
-        self.assertEqual(at.session_state["disease"], did)
-        self.assertEqual(at.session_state["chat_log"][0]["disease_id"], did)
+        self.assertIn("kd-detail-name", md(at))                      # 페이지 그대로
+        self.assertEqual([m["role"] for m in at.session_state["detail_chat"][did]], ["user", "assistant"])
+        self.assertIn("어떻게 예방하나요?", md(at))
+        self.assertNotIn("chat_log", at.session_state)
         self.assertEqual(len(at.exception), 0)
 
     def test_wiki_summary_countries_and_trend(self):

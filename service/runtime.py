@@ -61,6 +61,14 @@ def build_runtime(settings: dict | None = None, llm=None, embeddings=None, wiki_
         collector = WikiCollector(wiki_client or make_wiki_client(settings), paths.WIKI_PAGES,
                                   paths.QUERY_CACHE, settings["candidates_per_query"],
                                   settings["max_selected_per_query"])
+    aux = None
+    if settings.get("aux_model") and settings["aux_model"] != settings["chat_model"]:
+        from rag.llm import make_chat_model
+        aux = make_chat_model({**settings, "chat_model": settings["aux_model"]})
+    cache = None
+    if settings.get("answer_cache", True) and collect:
+        from rag.answer_cache import AnswerCache
+        cache = AnswerCache(paths.CACHE / "answer_cache.json")
     svc = RagServices(llm=llm, store=store, collector=collector, diseases=by_id,
-                      wiki_titles=load_titles(paths.WIKI_TITLES), settings=settings)
+                      wiki_titles=load_titles(paths.WIKI_TITLES), settings=settings, aux_llm=aux, answer_cache=cache)
     return Runtime(settings, diseases, by_id, store, svc, build_graph(svc))

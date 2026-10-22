@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import threading
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -62,10 +63,15 @@ class WikiCollector:
         """저장된 본문이 있으면 그것을, 없으면 제목으로 받아 pageid 이름으로 저장한다."""
         path = self.pages_dir / f"{pageid}.json"
         if path.exists():
-            return json.loads(path.read_text(encoding="utf-8"))
+            try:
+                return json.loads(path.read_text(encoding="utf-8"))
+            except (ValueError, FileNotFoundError):   # 다른 스레드가 쓰는 중이면 새로 받음
+                pass
         page = self.client.fetch_page(title)
         path = self.pages_dir / f"{page['pageid']}.json"
-        path.write_text(json.dumps(page, ensure_ascii=False, indent=2), encoding="utf-8")
+        tmp = path.with_suffix(f".{uuid.uuid4().hex}.tmp")   # 동시에 받아도 반쯤 쓴 파일을 읽지 않게
+        tmp.write_text(json.dumps(page, ensure_ascii=False, indent=2), encoding="utf-8")
+        tmp.replace(path)
         return page
 
     def has_page(self, pageid: int) -> bool:

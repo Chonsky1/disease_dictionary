@@ -1,5 +1,7 @@
 """감염병 상세보기: 기본 설명 + 연령·성별 인포그래픽(애니메이션) + 유행 시기 + 지정 국가 + 챗봇에게 물어보기.
 
+챗봇은 이 페이지 안에서 답한다 (감염병마다 대화를 따로 기억, session_state["detail_chat"]).
+
 주소: /detail?d=inf_0020  (홈·연령별·질문하기 페이지의 '상세보기' 버튼이 이 주소로 보낸다)
 """
 from __future__ import annotations
@@ -11,7 +13,8 @@ import streamlit as st
 from service.age import profile, trend_summary
 from service.runtime import DISCLAIMER
 from ui.age_view import pyramid, trend_lines
-from ui.common import CHART_CONFIG, PAGE_HOME, age_stats, log, runtime, search_box, watch
+from ui.chat_core import ask, show_message
+from ui.common import CHART_CONFIG, PAGE_HOME, age_stats, log, runtime, watch
 
 rt = runtime()
 ss = st.session_state
@@ -154,8 +157,22 @@ if trend:
         st.plotly_chart(trend_lines(t, it), key=f"detail_trend_{did}", config=CHART_CONFIG)
     st.caption(f"단위: {t.unit}")
 
-# ---- 챗봇에게 물어보기 -----------------------------------------------------------------------
-st.markdown("<div class='kd-section-title'>챗봇에게 물어보기</div>", unsafe_allow_html=True)
-with st.container(key="home_search"):
-    search_box("detail_search_form", f"{d.display_name}에 대해 물어보세요  (예: 전파 경로와 예방법은?)", did)
+# ---- 챗봇에게 물어보기 (이 페이지 안에서 대화) ------------------------------------------------
+st.markdown("<div class='kd-section-title'>💬 챗봇에게 물어보기</div>", unsafe_allow_html=True)
+history = ss.setdefault("detail_chat", {}).setdefault(did, [])
+with st.container(key="detail_chat"):
+    for msg in history:
+        show_message(msg, rt, show_disease=False)
+    box = st.container()
+    with st.container(key="big_search"):
+        with st.form(f"detail_ask_{did}", border=False, clear_on_submit=True):
+            c = st.columns([12, 1], vertical_alignment="center", gap="small")
+            q = c[0].text_input("질문", placeholder=f"{d.display_name}에 대해 물어보세요  (예: 초기 증상과 예방법은?)",
+                                label_visibility="collapsed")
+            sent = c[1].form_submit_button("→", width="stretch")
+    if sent and q.strip():
+        ask(q.strip(), did, rt, history, box, show_disease=False)
+    if history:
+        st.button("이 대화 지우기", key="clear_detail_chat", type="tertiary",
+                  on_click=lambda: ss["detail_chat"].pop(did, None))
 st.caption("⚠️ " + DISCLAIMER)
