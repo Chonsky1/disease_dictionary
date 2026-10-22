@@ -91,3 +91,35 @@ def trend_lines(trend: Trend, item: TrendItem, show: list[str] | None = None) ->
     fig.update_xaxes(showgrid=False, tickmode="array", tickvals=trend.x[::4], tickfont={"size": 11})
     fig.update_yaxes(rangemode="tozero")
     return fig
+
+
+def pyramid(d: AgeDisease, ages: list[str]) -> go.Figure:
+    """인구 피라미드 모양: 왼쪽 남·오른쪽 여, 아래가 어린 연령. 한눈에 '어느 나이·성별에 많은지'를 본다."""
+    male = [d.count(a, "남") for a in ages]
+    female = [d.count(a, "여") for a in ages]
+    top = max(male + female + [1])
+    fig = go.Figure()
+    fig.add_trace(go.Bar(y=ages, x=[-v for v in male], orientation="h", name="남", customdata=male,
+                         marker={"color": MALE, "cornerradius": 3},
+                         hovertemplate="%{y} · 남 %{customdata:,}건<extra></extra>"))
+    fig.add_trace(go.Bar(y=ages, x=female, orientation="h", name="여",
+                         marker={"color": FEMALE, "cornerradius": 3},
+                         hovertemplate="%{y} · 여 %{x:,}건<extra></extra>"))
+    _layout(fig, 420, barmode="overlay",
+            legend={"orientation": "h", "y": 1.06, "x": 0.5, "xanchor": "center", "font": {"color": INK}})
+    fig.update_layout(bargap=0.18)
+    step = _nice_step(top)
+    ticks = [i * step for i in range(-int(top // step), int(top // step) + 1)]
+    fig.update_xaxes(range=[-top * 1.08, top * 1.08], tickvals=ticks, ticktext=[f"{abs(t):,}" for t in ticks],
+                     showgrid=True, zeroline=True, zerolinecolor="#3a4a5a")
+    fig.update_yaxes(showgrid=False, tickfont={"color": INK, "size": 12})
+    return fig
+
+
+def _nice_step(top: float) -> float:
+    raw = top / 3 or 1
+    mag = 10 ** (len(str(int(raw))) - 1)
+    for m in (1, 2, 5, 10):
+        if raw <= m * mag:
+            return m * mag
+    return 10 * mag

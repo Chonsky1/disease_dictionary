@@ -52,3 +52,14 @@ CONDITION_FILTER = ChatPromptTemplate.from_messages([
      "출력은 JSON 객체 하나만: {{\"matches\": [{{\"id\": \"inf_0001\", \"reason\": \"한 문장 이유\"}}]}}"),
     ("human", "조건: {condition}\n\n후보:\n{candidates}"),
 ])
+
+# 대화 요약 (감염병 질문하기 페이지 오른쪽 패널) --------------------------------------------
+CONVERSATION_SUMMARY = ChatPromptTemplate.from_messages([
+    ("system",
+     "너는 감염병 안내 대화를 짧게 정리하는 요약 담당이다. 아래 대화의 답변 내용만 사용해 핵심을 정리한다.\n"
+     "규칙:\n"
+     "- 감염병별로 묶어 '- **감염병 이름**: 핵심 한두 문장' 형식의 목록 3~8줄로 쓴다.\n"
+     "- 답변에 없는 내용은 보태지 않는다. '확인되지 않습니다'라고 답한 질문은 '확인되지 않음'으로 적는다.\n"
+     "- [근거 n] 표시와 인사말, 설명 문장은 쓰지 않는다."),
+    ("human", "{conversation}"),
+])

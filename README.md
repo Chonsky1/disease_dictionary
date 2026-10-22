@@ -16,7 +16,7 @@ source venv/Scripts/activate        # macOS/Linux: source venv/bin/activate
 export PYTHONUTF8=1                 # 한글 인코딩 오류 예방 (~/.bashrc에 넣어 두면 편함)
 pip install -r requirements.txt
 cp .env.example .env                # OPENAI_API_KEY, WIKI_USER_AGENT 입력
-python -m unittest discover -s tests -t .   # 키·네트워크 없이 69개 테스트
+python -m unittest discover -s tests -t .   # 키·네트워크 없이 75개 테스트
 ```
 
 ## 2. 색인 → 실행
@@ -29,7 +29,7 @@ python -m scripts.build_index --prefetch-docs  # (선택) 133개 항목 문서�
 python -m scripts.fetch_quarantine             # 나라별 검역감염병 수집 (…/QuarantineRegion/NationDisease, 또는 --csv 파일데이터)
 python -m scripts.fetch_quarantine --raw       # (선택) API 호출 없이 마지막 저장 원본으로 다시 만들기 (변환표 수정 후 등)
 python -m scripts.build_age_stats              # 연령별·시기별 통계 (data/raw/stats/의 감염병포털 CSV·xlsx → age_stats.json)
-streamlit run ui/app.py                        # 반드시 kdca-rag 폴더에서 실행 (.streamlit/config.toml 적용)
+streamlit run ui/app.py                        # 반드시 프로젝트 폴더에서 실행 (.streamlit/config.toml 적용)
 ```
 
 색인 후 `data/processed/wiki_titles.json`에서 `"method": "search"` 또는 `"not_found"`인 항목을 확인하세요.
@@ -48,7 +48,12 @@ streamlit run ui/app.py                        # 반드시 kdca-rag 폴더에서
 | RAG | `rag/prompts.py` | 프롬프트 3종 + 조건 탐색 1종 |
 | | `rag/graph.py` | LangGraph `retrieve` → `generate` (F2003, F2006~F2008) |
 | 서비스 | `service/explore.py` | 조건 기반 탐색 (F2011) |
-| UI | `ui/app.py` | 한 페이지 레이아웃(다크 테마): 상단 내비게이션 → 나라별 지구본 → 감염병 질문하기(F2009, F2011, F2012) → 연령별 |
+| UI | `ui/app.py` | 페이지 라우터(다크 테마) + 로고에 마우스를 올리면 나타나는 목차 바, 키·색인 사전 점검 (F2012) |
+| | `ui/views/home.py` | 홈: 제목·안내 → 감염병 검색창 → 지구본. 나라를 누르면 지구본이 왼쪽으로 비키고 오른쪽에 검역감염병 팝업 + '상세보기' |
+| | `ui/views/chat.py` | 감염병 질문하기: 큰 대화창(질문 속 감염병 자동 인식, 근거·출처) + 오른쪽 대화 요약, 이런 감염병 찾기 (F2009, F2011) |
+| | `ui/views/detail.py` | 감염병 상세보기(`/detail?d=inf_0020`): 기본 설명(위키 요약)·급수 기준, 지정 국가, 연령·성별 인포그래픽, 유행 시기, 챗봇 검색창 |
+| | `ui/views/age.py` | 연령별 알아보기: 연령대별 상위 감염병, 감염병별 연령 분포, 유행 시기 |
+| | `ui/common.py` | 페이지 공통: 런타임, 데이터, 페이지 이동, 검색창, 질문 속 감염병 찾기 |
 | | `ui/map_view.py` | 끌어서 돌리는 지구본(plotly orthographic), 고른 나라 쪽으로 회전, 지정 없는 나라도 클릭 가능 |
 | | `ui/styles.py` | 다크 테마, 나라 패널이 천천히 떠오르는 애니메이션, 막대 자라기·선 드러나기 애니메이션 |
 | 설정 | `config/country_centroids.json` | 나라 중심 좌표 (지구본 회전용, 지도 경계 파일에서 계산) |
@@ -100,5 +105,6 @@ streamlit run ui/app.py                        # 반드시 kdca-rag 폴더에서
 | 2026-10-22 | 화면 개편: 상단 내비게이션, 한 페이지 3섹션, 클릭 가능한 세계 지도 (지도 경계 파일 동봉) |
 | 2026-10-22 | 단계 3: 검역관리지역 API(`/QuarantineRegion/NationDisease`) 연동, 176개국 지도 표시, 작은 섬나라 점 표시, `--raw` 재처리 |
 | 2026-10-22 | 단계 2: 연령별 알아보기 (연령대별 상위 감염병, 감염병별 연령·성별 분포, 유행 시기), 통계 파일 하위 폴더 탐색 |
+| 2026-10-22 | 페이지 분리: 홈(인트로 애니메이션 → 제목·안내·검색창·지구본, 나라 팝업과 '상세보기'), 감염병 상세보기(설명·KPI·남녀 막대·나이별 칸·인구 피라미드·유행 시기·지정 국가·챗봇 검색창, 애니메이션), 감염병 질문하기(대화창 + 대화 요약, 질문 속 감염병 자동 인식, 대화 하나로 이어짐), 로고 호버 목차 바 |
 | 2026-10-22 | UI 개편: 다크 모드, 나라별 섹션을 맨 위로, 돌릴 수 있는 3D 지구본(고른 나라로 회전), 주요 여행지 표시 제거(`config/countries.json` 삭제), 나라 패널·감염병 줄이 천천히 나타나는 애니메이션, 연령별 막대·유행 시기 선 애니메이션 (움직임 줄이기 설정 시 끔) |
 
