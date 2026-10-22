@@ -16,7 +16,7 @@ source venv/Scripts/activate        # macOS/Linux: source venv/bin/activate
 export PYTHONUTF8=1                 # 한글 인코딩 오류 예방 (~/.bashrc에 넣어 두면 편함)
 pip install -r requirements.txt
 cp .env.example .env                # OPENAI_API_KEY, WIKI_USER_AGENT 입력
-python -m unittest discover -s tests -t .   # 키·네트워크 없이 90개 테스트
+python -m unittest discover -s tests -t .   # 키·네트워크 없이 92개 테스트
 ```
 
 ## 2. 색인 → 실행
@@ -93,18 +93,26 @@ streamlit run ui/app.py                        # 반드시 프로젝트 폴더�
 
 ## 6. 출처와 이용 조건 (NF2007)
 
-| 데이터 | 출처 | 이용 조건 |
-| --- | --- | --- |
-| 법정감염병 목록 133건 | [질병관리청 감염병포털](https://dportal.kdca.go.kr/pot/ii/sttyInftnsds/sttyInftnsds.do) | 공공누리 유형 확인 후 기록 |
-| 감염병 설명 문서 | [한국어 위키백과](https://ko.wikipedia.org) | CC BY-SA 4.0, 근거마다 제목·원문 링크 표시 |
-| 나라별 검역감염병 | [질병관리청_검역관리지역정보](https://www.data.go.kr/data/15139251/openapi.do) | 이용허락범위 제한 없음, 화면에 기준일·출처 표시 |
-| 연령별·시기별 통계 | [질병관리청 감염병포털](https://dportal.kdca.go.kr) 기본통계·표본감시 | 공공누리 유형 확인 후 기록, 화면에 출처·신고 건수 기준 표시 |
-| 지도 경계 | [sane-topojson](https://github.com/etpinard/sane-topojson) (Natural Earth) | MIT / public domain |
+전체 등록부는 `config/sources.json`(항목마다 `license`·`license_url`·`checked_at`·`used`)에 있고, 화면 캡션은 이 파일에서 이용 조건을 읽어 표시합니다(`data_prep/sources.py`).
+
+| 데이터 | 출처 | 이용 조건 | 화면 표시 |
+| --- | --- | --- | --- |
+| 나라별 검역감염병 | [질병관리청_검역관리지역정보](https://www.data.go.kr/data/15139251/openapi.do) | 이용허락범위 제한 없음 (2026-10-22 확인) | 홈·상세보기에 기준일·출처·조건 |
+| 연령별·성별 통계, 질병별 발생현황 | [질병관리청 감염병포털](https://dportal.kdca.go.kr) 통계 | [공공누리 제4유형](https://www.kogl.or.kr/info/licenseType4.do) 출처표시·상업적 이용금지·변경금지 (2026-10-22 확인) | 차트마다 출처·유형·"원자료 수치를 바꾸지 않고 집계·시각화" |
+| 표본감시 통계 (4급, SARI·인플루엔자 등) | 감염병포털 표본감시 | 같은 포털이라 제4유형 조건을 적용 (페이지 마크 확인 예정) | 위와 같음 |
+| 감염병 설명 문서 | [한국어 위키백과](https://ko.wikipedia.org) | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/deed.ko) | 근거마다 문서 제목·원문 링크, 상세보기 설명 아래 출처 |
+| 법정감염병 목록 133건 | [감염병포털 법정감염병 분류](https://dportal.kdca.go.kr/pot/ii/sttyInftnsds/sttyInftnsds.do) | 페이지 공공누리 마크 확인 예정 | - |
+| 지도 경계 | [sane-topojson](https://github.com/etpinard/sane-topojson) (Natural Earth) | MIT / 퍼블릭 도메인 | - |
+
+- **변경금지(제4유형) 대응**: 원자료의 수치는 고치지 않고 연령대·성별·주 단위 합계, 순위, 비율만 계산해 차트로 보여 줍니다. 화면마다 원출처와 유형을 밝히고, 비상업 교육 목적(SSAFY 프로젝트)으로만 사용합니다. 내려받은 원본 파일(`data/raw/stats`)은 저장소에 올리지 않습니다.
+- **위키백과(CC BY-SA 4.0)**: 저작자 표시는 근거 목록의 제목·링크로 합니다. 수집한 본문(`data/raw/wiki`)은 저장소에 올리지 않으며, 다시 배포할 때는 같은 라이선스를 붙입니다(동일조건변경허락).
+- 등록부에 있지만 쓰지 않는 후보(전수신고 발생현황 API, 예방접종 정보, 인플루엔자·RSV 검출률)는 `"used": false`로 표시했습니다.
 
 ## 7. 변경 이력
 
 | 날짜 | 내용 |
 | --- | --- |
+| 2026-10-22 | 출처·이용 조건 정리(NF2007): 검역관리지역정보 '이용허락범위 제한 없음', 감염병포털 통계 공공누리 제4유형 기록, `sources.json`에 `license_url`·`checked_at`·`used`, 화면 캡션에 이용 조건과 집계 문구 표시, 등록부 검사 테스트 |
 | 2026-10-22 | 요구사항 보완: 감염병 질문하기 페이지에서 감염병별 대화 기록 따로 보관(F2009, 다른 감염병으로 바꿔도 이전 대화 유지, '대화 지우기'는 현재 감염병만), 대화 요약에 '대화한 감염병' 이동 버튼. 배경 수집 결과(검색어·새로 색인한 문서·버린 후보)를 다음 답변 진행 상태에 표시(F2003·F2004·F2012), `scripts.ask --policy`(기본 always)·`--use-cache` |
 | 2026-10-22 | 단계 1: 법정감염병 목록 + 위키백과 RAG (LangGraph 2노드, Chroma 2컬렉션), 질의응답·조건 탐색 화면 |
 | 2026-10-22 | 화면 개편: 상단 내비게이션, 한 페이지 3섹션, 클릭 가능한 세계 지도 (지도 경계 파일 동봉) |

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from data_prep.sources import stats_terms
 from service.age import fmt_value, profile, top_for_age, trend_summary
 from service.countries import country_from_event
 from service.runtime import DISCLAIMER
@@ -37,7 +38,7 @@ def show_distribution(set_id: str, name: str) -> None:
 
 
 def set_caption(aset) -> str:
-    bits = [f"출처: {stats.source} ({aset.note})"]
+    bits = [f"출처: {stats.source} ({aset.note})", stats_terms()]
     if aset.period:
         bits.append(f"기간 {aset.period}")
     if not aset.verified:

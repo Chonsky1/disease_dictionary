@@ -10,6 +10,7 @@ import html
 
 import streamlit as st
 
+from data_prep.sources import license_label, stats_terms
 from service.age import profile, trend_summary
 from service.runtime import DISCLAIMER
 from ui.age_view import pyramid, trend_lines
@@ -98,7 +99,7 @@ with right, st.container(key="detail_world"):
                     + "".join(f"<span class='kd-chip'>{esc(c.name_ko)}</span>" for c in where[:24])
                     + (f"<span class='kd-muted'> 외 {len(where) - 24}개국</span>" if len(where) > 24 else ""),
                     unsafe_allow_html=True)
-        st.caption(f"{w.as_of} 기준 · 질병관리청 검역관리지역정보")
+        st.caption(f"{w.as_of} 기준 · 질병관리청 검역관리지역정보 ({license_label('quarantine_area')})")
 
 # ---- 연령·성별 인포그래픽 --------------------------------------------------------------------
 found = [(sid, s.diseases[n]) for sid, s in stats.sets.items() for n in s.diseases
@@ -142,7 +143,7 @@ else:
             st.plotly_chart(pyramid(ad, stats.age_groups), key=f"pyr_{did}_{sid}", config=CHART_CONFIG)
     st.caption(f"출처: {stats.source} ({aset.note}{', ' + aset.period if aset.period else ''})"
                + ("" if aset.verified else " · 감염병 이름은 파일의 열 순서로 추정")
-               + ". 신고 건수이며 인구 대비 발생률이 아닙니다.")
+               + f". 신고 건수이며 인구 대비 발생률이 아닙니다. {stats_terms()}.")
 
 # ---- 유행 시기 (자료가 있을 때) -----------------------------------------------------------
 trend = next(((t, it) for t in stats.trends.values() for it in t.items.values() if it.disease_id == did), None) \

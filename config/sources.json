@@ -1,22 +1,40 @@
 {
-  "_comment": "수집 출처 등록부. endpoint의 TODO는 공공데이터포털 '활용신청' 상세 화면의 요청주소·요청변수로 채운다. license는 내려받기·신청 화면의 표기를 그대로 옮긴다 (NF2007).",
+  "_comment": "수집 출처 등록부 (NF2007). license는 활용신청·내려받기 화면의 표기를 그대로 옮기고, checked_at에 확인한 날짜를 적는다. used=false는 서비스에서 쓰지 않는 후보.",
   "sources": [
+    {
+      "id": "kdca_disease_list",
+      "name": "질병관리청 감염병포털 법정감염병 분류",
+      "kind": "file",
+      "status": "core",
+      "used": true,
+      "purpose": "법정감염병 목록 133건 (data/diseases.csv)",
+      "page": "https://dportal.kdca.go.kr/pot/ii/sttyInftnsds/sttyInftnsds.do",
+      "license": "미확인: 페이지 하단 공공누리 마크 확인 필요",
+      "license_url": "",
+      "checked_at": ""
+    },
     {
       "id": "quarantine_area",
       "name": "질병관리청_검역관리지역정보",
       "kind": "api",
       "status": "core",
-      "purpose": "여행지 10개국 × 감염병 매핑",
-      "page": "https://kdca.go.kr/kdca/2784/subview.do",
-      "license": "TODO: 활용신청 화면에서 확인",
+      "purpose": "나라별 검역감염병 (홈 지구본·나라 팝업, 상세보기 '검역관리지역 지정 국가')",
+      "page": "https://www.data.go.kr/data/15139251/openapi.do",
+      "license": "이용허락범위 제한 없음",
       "api": {
         "endpoint": "TODO",
         "key_param": "serviceKey",
         "page_param": "pageNo",
         "size_param": "numOfRows",
         "page_size": 100,
-        "params": {"type": "json"}
-      }
+        "params": {
+          "type": "json"
+        }
+      },
+      "used": true,
+      "license_url": "",
+      "checked_at": "2026-10-22",
+      "license_evidence": "공공데이터포털 활용신청 상세 '라이선스 표시' 칸"
     },
     {
       "id": "notifiable_incidence",
@@ -25,15 +43,21 @@
       "status": "partial",
       "purpose": "감염지역별(국내·국외) 발생현황 → 여행 기능 보강",
       "page": "https://www.data.go.kr/data/15139178/openapi.do",
-      "license": "공공저작물_출처표시 + 상업적 이용금지 + 변경금지",
+      "license": "공공누리 제4유형 (출처표시 + 상업적 이용금지 + 변경금지)",
       "api": {
         "endpoint": "TODO: 감염지역별 발생현황 오퍼레이션 요청주소",
         "key_param": "serviceKey",
         "page_param": "pageNo",
         "size_param": "numOfRows",
         "page_size": 100,
-        "params": {"type": "json"}
-      }
+        "params": {
+          "type": "json"
+        }
+      },
+      "used": false,
+      "license_url": "https://www.kogl.or.kr/info/licenseType4.do",
+      "checked_at": "2026-10-22",
+      "note": "서비스에서 사용하지 않음 (여행 기능 보강 후보)"
     },
     {
       "id": "vaccination_target",
@@ -42,35 +66,47 @@
       "status": "conditional",
       "purpose": "접종 대상 여부 메타데이터, 연령별 접종 안내 (응답에 접종 시기가 있으면 PDF 대신 사용)",
       "page": "https://kdca.go.kr/kdca/2784/subview.do",
-      "license": "TODO: 활용신청 화면에서 확인",
+      "license": "미확인 (사용하지 않아 확인 생략)",
       "api": {
         "endpoint": "TODO",
         "key_param": "serviceKey",
         "page_param": "pageNo",
         "size_param": "numOfRows",
         "page_size": 100,
-        "params": {"type": "json"}
-      }
+        "params": {
+          "type": "json"
+        }
+      },
+      "used": false,
+      "note": "서비스에서 사용하지 않음"
     },
     {
       "id": "age_sex_incidence",
       "name": "성별 연령별 감염병 발생현황 (연도별 기간별) 통계",
       "kind": "csv",
       "status": "core",
-      "purpose": "연령별 안내 (1~3급, 전수감시)",
+      "purpose": "연령별 알아보기·상세보기 연령·성별 분포 (전수감시 1~3급 기본통계 성별·연령별)",
       "page": "https://dportal.kdca.go.kr (감염병통계 > 전수신고 감염병)",
-      "license": "TODO: 내려받기 화면에서 확인",
-      "file_glob": "age_sex_*.csv"
+      "license": "공공누리 제4유형 (출처표시 + 상업적 이용금지 + 변경금지)",
+      "file_glob": "age_sex_*.csv",
+      "used": true,
+      "license_url": "https://www.kogl.or.kr/info/licenseType4.do",
+      "checked_at": "2026-10-22",
+      "license_evidence": "감염병포털 통계 페이지 공공누리 마크"
     },
     {
       "id": "sentinel",
       "name": "법정감염병 표본감시 통계",
       "kind": "csv",
       "status": "core",
-      "purpose": "연령별·추이 안내 (4급, 표본감시)",
+      "purpose": "표본감시 4급 연령·성별 분포, 유행 시기 (성매개·SARI·인플루엔자·수족구 등)",
       "page": "https://dportal.kdca.go.kr (감염병통계 > 표본감시 감염병)",
-      "license": "TODO: 내려받기 화면에서 확인",
-      "file_glob": "sentinel_*.csv"
+      "license": "공공누리 제4유형 (출처표시 + 상업적 이용금지 + 변경금지) - 같은 포털 통계라 가장 엄격한 조건을 적용, 페이지 마크 확인 필요",
+      "file_glob": "sentinel_*.csv",
+      "used": true,
+      "license_url": "https://www.kogl.or.kr/info/licenseType4.do",
+      "checked_at": "",
+      "license_evidence": "미확인: 표본감시 통계 페이지 공공누리 마크"
     },
     {
       "id": "flu_rsv_age",
@@ -79,18 +115,24 @@
       "status": "supplement",
       "purpose": "4급 대표 감염병의 연령 근거",
       "page": "https://www.data.go.kr/data/15152509/fileData.do",
-      "license": "TODO: 내려받기 화면에서 확인",
-      "file_glob": "flu_rsv_*.csv"
+      "license": "미확인 (사용하지 않아 확인 생략)",
+      "file_glob": "flu_rsv_*.csv",
+      "used": false,
+      "note": "서비스에서 사용하지 않음 (인플루엔자 유행 시기는 감염병포털 표본감시 파일 사용)"
     },
     {
       "id": "disease_incidence",
       "name": "질병별 감염병 발생현황 (연도별 월별 기간별) 통계",
       "kind": "csv",
       "status": "optional",
-      "purpose": "메타데이터 보강 (최근 연간 발생 건수)",
+      "purpose": "감염병별 발생 현황·유행 시기 (연도별 월별 기간별 통계)",
       "page": "https://www.data.go.kr/dcat/metadata/15053804",
-      "license": "TODO: 내려받기 화면에서 확인",
-      "file_glob": "disease_*.csv"
+      "license": "공공누리 제4유형 (출처표시 + 상업적 이용금지 + 변경금지)",
+      "file_glob": "disease_*.csv",
+      "used": true,
+      "license_url": "https://www.kogl.or.kr/info/licenseType4.do",
+      "checked_at": "2026-10-22",
+      "license_evidence": "감염병포털 통계 페이지 공공누리 마크"
     },
     {
       "id": "korean_wikipedia",
@@ -99,11 +141,34 @@
       "status": "core",
       "purpose": "감염병·병원체 설명 문서",
       "page": "https://ko.wikipedia.org/w/api.php",
-      "license": "CC BY-SA 4.0"
+      "license": "CC BY-SA 4.0",
+      "used": true,
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/deed.ko",
+      "checked_at": "2026-10-22",
+      "note": "근거마다 문서 제목·원문 링크 표시(저작자 표시). 수집한 본문(data/raw/wiki)은 저장소에 올리지 않으며, 다시 배포할 때는 같은 라이선스를 붙인다(동일조건변경허락)"
+    },
+    {
+      "id": "map_boundary",
+      "name": "sane-topojson (Natural Earth 국가 경계)",
+      "kind": "file",
+      "status": "core",
+      "used": true,
+      "purpose": "지구본 국가 경계",
+      "page": "https://github.com/etpinard/sane-topojson",
+      "license": "MIT (원자료 Natural Earth: 퍼블릭 도메인)",
+      "license_url": "https://github.com/etpinard/sane-topojson/blob/master/LICENSE",
+      "checked_at": "2026-10-22"
     }
   ],
   "excluded": [
-    {"name": "지역별 감염병 발생현황 (CSV)", "reason": "국내 시·도 단위라 해외 10개국 기능과 맞지 않음"},
-    {"name": "전국 예방접종률 정보 (PDF)", "reason": "3세 아동 집단 통계라 개인 안내와 연결이 약하고 표 파싱 비용이 큼"}
-  ]
+    {
+      "name": "지역별 감염병 발생현황 (CSV)",
+      "reason": "국내 시·도 단위라 해외 10개국 기능과 맞지 않음"
+    },
+    {
+      "name": "전국 예방접종률 정보 (PDF)",
+      "reason": "3세 아동 집단 통계라 개인 안내와 연결이 약하고 표 파싱 비용이 큼"
+    }
+  ],
+  "derived_use": "공공누리 제4유형(변경금지) 통계는 원자료 수치를 바꾸지 않고 연령대·성별·주 단위로 합계·순위·비율만 계산해 시각화한다. 화면마다 원출처·유형·'원자료를 집계한 것' 문구를 표시하고, 비상업 교육 목적으로만 사용한다."
 }

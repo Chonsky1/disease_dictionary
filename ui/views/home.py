@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from data_prep.sources import license_label
 from service.countries import country_from_event
 from service.runtime import DISCLAIMER
 from ui.common import HOME_ISO, MAP_CONFIG, all_country_names, detail_button, runtime, search_box, watch
@@ -92,7 +93,7 @@ def country_panel(key: str) -> None:
                 with row[1]:
                     detail_button(item.get("disease_id", ""), f"detail_{key}_{i}", rt=rt)
     src = f"[{w.source}]({w.source_url})" if w.source_url else w.source
-    st.caption(f"기준일 {w.as_of} · 출처 {src}  \n검역관리지역: 검역법에 따라 WHO·현지 공관 등의 감염병 발생 "
+    st.caption(f"기준일 {w.as_of} · 출처 {src} ({license_label('quarantine_area')})  \n검역관리지역: 검역법에 따라 WHO·현지 공관 등의 감염병 발생 "
                "정보를 기준으로 지정한 지역. 귀국 후 의심 증상이 있으면 1339에 문의하세요.")
 
 
