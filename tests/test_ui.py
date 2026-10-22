@@ -109,13 +109,13 @@ class UiTest(_UiBase):
 class LayoutTest(_UiBase):
     """도안 레이아웃: 상단 내비게이션, 세 섹션, 지도·나라 패널."""
 
-    def _app_with_watch(self, watch_file):
+    def _app_with_watch(self, build: bool):
         at, rt = self._app()
         p = mock.patch("data_prep.settings.PROCESSED", self.tmp)
         p.start()
         self.addCleanup(p.stop)
-        if watch_file:
-            shutil.copy(watch_file, self.tmp / "country_watch.json")
+        if build:
+            write_sample_watch(self.tmp / "country_watch.json")
         return at, rt
 
     def test_nav_and_sections(self):
@@ -130,28 +130,49 @@ class LayoutTest(_UiBase):
         self.assertNotIn("`None`", html)   # if/else 식이 화면에 None을 찍던 버그 회귀 방지
         self.assertEqual(len(at.exception), 0)
 
-    def test_country_panel_with_data(self):
-        at, rt = self._app_with_watch(Path(__file__).parent / "fixtures" / "country_watch_sample.json")
+    def test_country_panel_with_quarantine_data(self):
+        at, rt = self._app_with_watch(True)
         at.run()
-        self.assertIn("나라를 골라 주세요", " ".join(m.value for m in at.markdown))
-        at.selectbox(key="country_select").set_value("THA").run()
         html = " ".join(m.value for m in at.markdown)
-        self.assertIn("태국", html)
-        self.assertIn("테스트감염병A", html)
-        self.assertIn("기준일 2026-10-22", " ".join(c.value for c in at.caption))
-        ask = [b for b in at.button if b.key and b.key.startswith("ask_THA")]
-        self.assertEqual(len(ask), 1)             # disease_id가 있는 항목만 질문 버튼
+        self.assertIn("2026-10-22 기준 · 지정 국가 4개국", html)
+        at.selectbox(key="country_select").set_value("VNM").run()
+        html = " ".join(m.value for m in at.markdown)
+        self.assertIn("베트남", html)
+        self.assertIn("검역감염병 2종", html)
+        self.assertIn("콜레라", html)
+        self.assertIn("2024-09-02 지정", html)
+        ask = [b for b in at.button if b.key and b.key.startswith("ask_VNM")]
+        self.assertEqual(len(ask), 2)
         ask[0].click().run()
-        self.assertEqual(at.session_state["disease"], "inf_0059")
+        self.assertEqual(rt.by_id[at.session_state["disease"]].display_name, "뎅기열")  # 가나다순 첫 항목
+        # 지정이 해지된 나라(태국)는 '지정 없음'
+        at.selectbox(key="country_select").set_value("THA").run()
+        self.assertIn("지정된 검역감염병이 없습니다", " ".join(x.value for x in at.success))
+        # 지도 코드를 못 찾은 나라도 목록에서 고를 수 있음
+        at.selectbox(key="country_select").set_value("NAME:가상공화국").run()
+        self.assertIn("황열", " ".join(m.value for m in at.markdown))
         self.assertEqual(len(at.exception), 0)
 
-    def test_country_panel_without_data_and_home(self):
-        at, _ = self._app_with_watch(None)
+    def test_country_panel_before_fetch_and_home(self):
+        at, _ = self._app_with_watch(False)
         at.run()
         at.selectbox(key="country_select").set_value("JPN").run()
-        self.assertIn("아직 연결되지 않았습니다", " ".join(i.value for i in at.info))
+        self.assertIn("fetch_quarantine", " ".join(i.value for i in at.info))
         at.selectbox(key="country_select").set_value("KOR").run()
         self.assertIn("감염병 질문하기", " ".join(m.value for m in at.markdown))
+
+
+def write_sample_watch(path: Path) -> None:
+    """합성 API 응답 → build_watch → country_watch.json (실제 수집 흐름과 같은 함수 사용)."""
+    import json
+    from datetime import date
+    from data_prep.diseases import load_diseases
+    from data_prep.quarantine import build_watch, from_api_items, load_country_codes, save_watch
+    data = json.loads((Path(__file__).parent / "fixtures" / "quarantine_api_sample.json").read_text(encoding="utf-8"))
+    watch, _ = build_watch(from_api_items(data["response"]["body"]["items"]["item"]),
+                           load_diseases(paths.DISEASES_CSV), load_country_codes(paths.CONFIG / "country_names_ko.json"),
+                           paths.CONFIG / "name_aliases.json", date(2026, 10, 22), "test")
+    save_watch(path, watch)
 
 
 class MapEventTest(unittest.TestCase):
@@ -164,14 +185,21 @@ class MapEventTest(unittest.TestCase):
         self.assertIsNone(country_from_event(None, valid))
 
     def test_map_figure(self):
-        from service.countries import load_countries
+        import tempfile
+        from service.countries import load_countries, load_watch
         from ui.map_view import SELECTED, build_world_map
-        cs = load_countries(paths.CONFIG / "countries.json")
-        fig = build_world_map(cs, "THA")
-        self.assertEqual(len(fig.data), len(cs) + 1)           # 나라별 영역 + 마커 1개
-        tha = next(t for t in fig.data if t.type == "choropleth" and t.locations[0] == "THA")
-        self.assertEqual(tha.colorscale[0][1], SELECTED)
+        tmp = Path(tempfile.mkdtemp())
+        write_sample_watch(tmp / "w.json")
+        cs, watch = load_countries(paths.CONFIG / "countries.json"), load_watch(tmp / "w.json")
+        fig = build_world_map(cs, watch, "VNM")
+        shaded = next(t for t in fig.data if t.name == "검역관리지역")
+        self.assertEqual(sorted(shaded.locations), ["NGA", "SGP", "VNM"])        # 지정 중 + 지도 코드 있는 나라
+        self.assertEqual(dict(zip(shaded.locations, shaded.z))["VNM"], 2)          # 감염병 수로 색칠
+        sel = next(t for t in fig.data if t.name == "선택")
+        self.assertEqual((list(sel.locations), sel.colorscale[0][1]), (["VNM"], SELECTED))
         self.assertEqual(fig.layout.clickmode, "event+select")
+        empty = build_world_map(cs, load_watch(tmp / "none.json"), None)          # 수집 전에도 그려짐
+        self.assertEqual([t.name for t in empty.data], ["주요 여행지", "주요 여행지 점"])
 
 
 if __name__ == "__main__":

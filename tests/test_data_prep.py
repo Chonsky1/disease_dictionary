@@ -11,7 +11,6 @@ from data_prep.csv_loader import find_header_row, read_table, sniff_encoding, to
 from data_prep.http_client import PoliteSession, mask_secrets
 from data_prep.kdca_api import ApiError, extract_items, fetch_all, parse_response
 from data_prep.names import match_names, name_key
-from data_prep.wiki import _parse_query
 
 FX = Path(__file__).parent / "fixtures"
 
@@ -145,19 +144,6 @@ class HttpTest(unittest.TestCase):
             ps.get("https://x")
         self.assertNotIn("SECRET", str(ctx.exception))
         self.assertEqual(mask_secrets("a?serviceKey=abc&b=1"), "a?serviceKey=***&b=1")
-
-
-class WikiTest(unittest.TestCase):
-    def test_parse_query(self):
-        payload = {"query": {
-            "redirects": [{"from": "수두", "to": "수두 (질병)"}],
-            "pages": [{"title": "수두 (질병)", "pageid": 7, "length": 9000},
-                      {"title": "없는문서", "missing": True}]}}
-        out = _parse_query(["수두", "없는문서"], payload)
-        self.assertTrue(out["수두"]["exists"])
-        self.assertTrue(out["수두"]["redirected"])
-        self.assertEqual(out["수두"]["resolved_title"], "수두 (질병)")
-        self.assertFalse(out["없는문서"]["exists"])
 
 
 if __name__ == "__main__":

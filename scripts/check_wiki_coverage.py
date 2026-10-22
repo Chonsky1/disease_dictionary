@@ -11,8 +11,7 @@ import statistics
 import sys
 
 from data_prep import settings
-from data_prep.http_client import PoliteSession
-from data_prep.wiki import check_titles, search_titles
+from data_prep.wiki import WikiClient
 
 # 위키텍스트 바이트 → 본문 글자 수 대략 환산 (한글 UTF-8 3바이트, 마크업 제외 감안).
 # 정확한 값은 2일차 수집기로 본문을 받아 다시 계산한다.
@@ -28,17 +27,21 @@ def estimate_chunks(chars: int, size: int, overlap: int) -> int:
 def main() -> int:
     settings.ensure_dirs()
     ua = settings.env("WIKI_USER_AGENT", required=True)
-    session = PoliteSession(user_agent=ua, min_interval=1.0)
+    client = WikiClient(ua, min_interval=0.5)
 
     with open(settings.SEED / "diseases_seed.csv", encoding="utf-8-sig", newline="") as f:
         seeds = list(csv.DictReader(f))
     titles = [(s.get("wiki_title") or s["name_ko"]).strip() for s in seeds]
-    result = check_titles(titles, session)
+    result = {}
+    for t in titles:  # page.exists()로 하나씩 확인 (리다이렉트 자동 해석)
+        r = client.resolve(t)
+        result[t] = ({"exists": True, "resolved_title": r["title"], "redirected": r["redirected"],
+                      "length": r["length"], "pageid": r["pageid"]} if r else {"exists": False})
 
     rows = []
     for s, t in zip(seeds, titles):
         r = result.get(t, {})
-        hint = "" if r.get("exists") else "; ".join(search_titles(s["name_ko"], session, limit=3))
+        hint = "" if r.get("exists") else "; ".join(client.search_titles(s["name_ko"], limit=3))
         est = round(r["length"] / BYTES_PER_CHAR) if r.get("length") else None
         rows.append({"disease_id": s["disease_id"], "name_ko": s["name_ko"], "grade": s.get("grade"),
                      "query_title": t, "exists": r.get("exists", False),

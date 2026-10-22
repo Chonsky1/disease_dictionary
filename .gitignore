@@ -1,10 +1,11 @@
 .env
+venv/
+.venv/
 __pycache__/
 *.pyc
+logs/
 data/raw/
 data/processed/
+data/cache/
+data/chroma/
 reports/
-chroma/
-.venv
-venv/
-venv

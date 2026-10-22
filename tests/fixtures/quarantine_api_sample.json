@@ -1,0 +1,19 @@
+{
+  "_comment": "테스트 전용 합성 응답. 인터페이스 정의서(오퍼레이션 2)의 응답 구조를 따랐을 뿐 실제 검역관리지역 지정 현황이 아님.",
+  "response": {
+    "header": {"resultCode": "00", "resultMsg": "NORMAL_SERVICE"},
+    "body": {
+      "items": {"item": [
+        {"ntnNm": "베트남", "ovseaIcdKornNm": "콜레라", "srvlncBgngYmd": "2024-09-02", "srvlncEndYmd": "", "useYn": "Y"},
+        {"ntnNm": "베트남", "ovseaIcdKornNm": "뎅기열", "srvlncBgngYmd": "2025-01-10", "srvlncEndYmd": "2099-12-31", "useYn": "Y"},
+        {"ntnNm": "태국", "ovseaIcdKornNm": "코로나19", "srvlncBgngYmd": "2023-01-01", "srvlncEndYmd": "2023-12-31", "useYn": "Y"},
+        {"ntnNm": "싱가포르", "ovseaIcdKornNm": "지카바이러스", "srvlncBgngYmd": "20250301", "srvlncEndYmd": "", "useYn": "Y"},
+        {"ntnNm": "나이지리아", "ovseaIcdKornNm": "라싸열", "srvlncBgngYmd": "2025-02-01", "srvlncEndYmd": "", "useYn": "Y"},
+        {"ntnNm": "나이지리아", "ovseaIcdKornNm": "황열", "srvlncBgngYmd": "2025-02-01", "srvlncEndYmd": "", "useYn": "Y"},
+        {"ntnNm": "가상공화국", "ovseaIcdKornNm": "황열", "srvlncBgngYmd": "2025-05-05", "srvlncEndYmd": "", "useYn": "Y"},
+        {"ntnNm": "콩고 민주 공화국", "ovseaIcdKornNm": "에볼라바이러스병", "srvlncBgngYmd": "2025-06-01", "srvlncEndYmd": "", "useYn": "N"}
+      ]},
+      "pageNo": 1, "numOfRows": 100, "totalCount": 8
+    }
+  }
+}

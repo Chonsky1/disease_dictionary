@@ -1,15 +1,16 @@
-"""나라별 주의 감염병 (단계 3 화면용 데이터 계층).
+"""나라별 주의 감염병 (지도·패널 데이터 계층).
 
-- config/countries.json        : 지도에서 누를 수 있는 나라 목록
-- data/processed/country_watch.json : 나라별 주의 감염병. 단계 3에서 질병관리청 검역관리지역정보 API로 만든다.
+- config/countries.json             : 지도에 점으로 찍는 주요 여행지 (작은 나라도 누를 수 있게)
+- data/processed/country_watch.json : scripts/fetch_quarantine.py가 질병관리청 검역관리지역정보로 만든 파일
 
-country_watch.json 형식 (단계 3 수집 스크립트가 이 형식으로 저장하면 화면이 그대로 표시한다):
+country_watch.json 형식:
 {
-  "as_of": "2026-10-22",
-  "source": "질병관리청 검역관리지역정보",
-  "source_url": "https://…",
+  "as_of": "2026-10-22", "source": "질병관리청 검역관리지역정보", "source_url": "https://…",
   "countries": {
-    "THA": {"diseases": [{"name": "뎅기열", "disease_id": "inf_0059", "note": "검역관리지역"}]}
+    "VNM": {"name_ko": "베트남", "iso3": "VNM",
+            "diseases": [{"name": "콜레라", "api_name": "콜레라", "disease_id": "inf_0022",
+                          "designated": "2024-09-02", "released": "", "note": "검역관리지역 지정 2024-09-02"}]},
+    "NAME:어떤나라": {"name_ko": "어떤나라", "iso3": "", "diseases": [...]}     ← 지도 코드를 못 찾은 나라
   }
 }
 """
@@ -31,10 +32,19 @@ class Country:
 
 @dataclass
 class CountryWatch:
+    key: str
+    name_ko: str
+    iso3: str
     diseases: list[dict] = field(default_factory=list)
+
+
+@dataclass
+class WatchData:
+    loaded: bool = False
     as_of: str = ""
     source: str = ""
     source_url: str = ""
+    countries: dict[str, CountryWatch] = field(default_factory=dict)
 
 
 def load_countries(path: Path) -> list[Country]:
@@ -43,19 +53,21 @@ def load_countries(path: Path) -> list[Country]:
             for c in data["countries"]]
 
 
-def load_watch(path: Path) -> dict[str, CountryWatch]:
-    """파일이 없으면 빈 dict (단계 3 전)."""
+def load_watch(path: Path) -> WatchData:
+    """파일이 없으면 loaded=False (아직 수집 전)."""
     p = Path(path)
     if not p.exists():
-        return {}
+        return WatchData()
     data = json.loads(p.read_text(encoding="utf-8"))
-    common = {k: data.get(k, "") for k in ("as_of", "source", "source_url")}
-    return {iso3: CountryWatch(diseases=list(v.get("diseases", [])), **common)
-            for iso3, v in data.get("countries", {}).items()}
+    countries = {}
+    for key, v in data.get("countries", {}).items():
+        iso3 = v.get("iso3", key if len(key) == 3 and key.isupper() else "")
+        countries[key] = CountryWatch(key, v.get("name_ko", key), iso3, list(v.get("diseases", [])))
+    return WatchData(True, data.get("as_of", ""), data.get("source", ""), data.get("source_url", ""), countries)
 
 
 def country_from_event(event, valid: set[str]) -> str | None:
-    """st.plotly_chart(on_select="rerun")의 선택 이벤트에서 클릭한 나라 코드를 꺼낸다.
+    """st.plotly_chart(on_select="rerun")의 선택 이벤트에서 클릭한 나라 키를 꺼낸다.
 
     choropleth 영역을 누르면 point에 location이, 마커를 누르면 customdata[0]이 들어온다.
     """

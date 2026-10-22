@@ -4,7 +4,7 @@
   [로고] [감염병 질문하기] [나라별 알아보기] [연령별 알아보기]   ← 누르면 해당 섹션으로 이동
   제목 / 면책 안내
   ① 감염병 질문하기: 질의응답 | 이런 감염병 찾기  (F2009, F2011, F2012)
-  ② 나라별 주의 감염병: 클릭 가능한 세계 지도 + 나라 상세 패널 (단계 3 데이터 연결 지점)
+  ② 나라별 주의 감염병: 검역관리지역 지정 국가를 색칠한 세계 지도 + 나라 상세 패널
   ③ 연령별 알아보기: 단계 2 통계 자리
 
 실행: streamlit run ui/app.py
@@ -27,7 +27,7 @@ from rag.llm import missing_keys  # noqa: E402
 from service.countries import country_from_event, load_countries, load_watch  # noqa: E402
 from service.explore import find_diseases  # noqa: E402
 from service.runtime import DISCLAIMER, build_runtime, setup_logging  # noqa: E402
-from ui.map_view import HOME, SELECTED, TARGET, build_world_map  # noqa: E402
+from ui.map_view import HIGH, LOW, SELECTED, TARGET, build_world_map  # noqa: E402
 from ui.styles import CSS, NAV_HTML  # noqa: E402
 
 log = logging.getLogger("kdca_rag")
@@ -215,60 +215,76 @@ with st.container(key="chat_card"):
         find_view()
 
 
-# ---- ② 나라별 주의 감염병 -------------------------------------------------------------
-def country_panel(iso3: str | None) -> None:
-    if not iso3:
+# ---- ② 나라별 주의 감염병 (질병관리청 검역관리지역정보) ----------------------------------
+# 고를 수 있는 나라 = 검역관리지역 지정 국가 + 주요 여행지 점 + 대한민국
+choices: dict[str, str] = {k: w.name_ko for k, w in watch.countries.items()}
+choices.update({c.iso3: c.name_ko for c in countries})
+choice_keys = sorted(choices, key=lambda k: (k not in by_iso, choices[k]))  # 주요 여행지 먼저, 나머지 가나다순
+
+
+def country_panel(key: str | None) -> None:
+    if not key:
         st.markdown("<div class='kd-country-name'>나라를 골라 주세요</div>", unsafe_allow_html=True)
-        st.markdown("<div class='kd-muted'>지도에서 색칠된 나라나 점을 누르면 그 나라에서 주의가 필요한 "
-                    "법정감염병을 보여 줍니다.</div>", unsafe_allow_html=True)
+        if watch.loaded:
+            st.markdown(f"<div class='kd-muted'>{watch.as_of} 기준 검역관리지역으로 지정된 나라 "
+                        f"{len(watch.countries)}개국. 색이 진할수록 지정된 검역감염병이 많습니다.</div>",
+                        unsafe_allow_html=True)
+        else:
+            st.markdown("<div class='kd-muted'>지도에서 나라나 점을 누르면 그 나라의 검역관리지역 지정 감염병을 보여 줍니다.</div>",
+                        unsafe_allow_html=True)
         st.markdown("".join(f"<span class='kd-chip'>{c.name_ko}</span>" for c in countries if not c.home),
                     unsafe_allow_html=True)
         return
-    c = by_iso[iso3]
-    st.markdown(f"<div class='kd-country-name'>{c.name_ko}</div>", unsafe_allow_html=True)
-    if c.home:
+    st.markdown(f"<div class='kd-country-name'>{choices.get(key, key)}</div>", unsafe_allow_html=True)
+    if by_iso.get(key) and by_iso[key].home:
         st.markdown("국내 법정감염병 133종의 급수·신고 기준과 설명은 위 **감염병 질문하기**에서 확인할 수 있어요.")
         return
-    w = watch.get(iso3)
-    if not w or not w.diseases:
-        st.info("이 나라의 검역관리지역 정보가 아직 연결되지 않았습니다. 단계 3에서 질병관리청 "
-                "검역관리지역정보 API로 연결하면 여기에 표시됩니다.")
+    if not watch.loaded:
+        st.info("검역관리지역 정보를 아직 수집하지 않았습니다. 터미널에서 "
+                "`python -m scripts.fetch_quarantine`을 실행하세요.")
         return
-    st.markdown("**주의가 필요해요**")
-    for i, item in enumerate(w.diseases):
-        row = st.columns([3, 2], vertical_alignment="center")
-        row[0].markdown(f"- {item['name']}" + (f"  \n<span class='kd-muted'>{item['note']}</span>"
-                                                 if item.get("note") else ""), unsafe_allow_html=True)
-        did = item.get("disease_id")
-        if did in rt.by_id:
-            row[1].button("질문하기", key=f"ask_{iso3}_{i}", on_click=select_disease, args=(did,), width="stretch")
-    src = f"[{w.source}]({w.source_url})" if w.source_url else w.source
-    st.caption(f"기준일 {w.as_of} · 출처 {src}")
+    w = watch.countries.get(key)
+    if not w or not w.diseases:
+        st.success(f"{watch.as_of} 기준, 이 나라는 검역관리지역으로 지정된 검역감염병이 없습니다.")
+    else:
+        st.markdown(f"**주의가 필요해요** · 검역감염병 {len(w.diseases)}종")
+        for i, item in enumerate(w.diseases):
+            row = st.columns([3, 2], vertical_alignment="center")
+            row[0].markdown(f"- {item['name']}" + (f"  \n<span class='kd-muted'>{item['note']}</span>"
+                                                     if item.get("note") else ""), unsafe_allow_html=True)
+            did = item.get("disease_id")
+            if did in rt.by_id:
+                row[1].button("질문하기", key=f"ask_{key}_{i}", on_click=select_disease, args=(did,), width="stretch")
+    src = f"[{watch.source}]({watch.source_url})" if watch.source_url else watch.source
+    st.caption(f"기준일 {watch.as_of} · 출처 {src}  \n검역관리지역: 검역법에 따라 WHO·현지 공관 등의 감염병 발생 "
+               "정보를 기준으로 지정한 지역. 귀국 후 의심 증상이 있으면 1339에 문의하세요.")
 
 
 anchor("country")
+sub = (f"질병관리청 검역관리지역 {watch.as_of} 기준 · 지정 국가 {len(watch.countries)}개국. "
+       if watch.loaded else "검역관리지역 정보 수집 전입니다 (python -m scripts.fetch_quarantine). ")
 st.markdown("<div class='kd-section-title'>나라별 주의 감염병 알아보기</div>"
-            "<div class='kd-sub'>주요 여행지 10개국. 출국 전 확인용 일반 정보이며, 최신 상황은 질병관리청 안내를 확인하세요.</div>",
+            f"<div class='kd-sub'>{sub}출국 전 확인용 일반 정보이며, 최신 상황은 질병관리청 안내를 확인하세요.</div>",
             unsafe_allow_html=True)
 
-valid = set(by_iso)
-picked = country_from_event(ss.get("world_map"), valid)
+picked = country_from_event(ss.get("world_map"), set(choices))
 if picked and picked != ss["_map_pick"]:  # 지도를 새로 눌렀을 때만 반영 (목록 선택을 덮어쓰지 않게)
     ss["country"] = ss["_map_pick"] = picked
 
 left, right = st.columns([2.6, 1.15], gap="medium")
 with left:
     with st.container(key="map_card"):
-        st.plotly_chart(build_world_map(countries, ss["country"]), key="world_map", on_select="rerun",
+        st.plotly_chart(build_world_map(countries, watch, ss["country"]), key="world_map", on_select="rerun",
                         selection_mode="points", config=MAP_CONFIG)
-    st.markdown(f"<div class='kd-legend'><span><i class='kd-dot' style='background:{TARGET}'></i>주요 여행지</span>"
-                f"<span><i class='kd-dot' style='background:{HOME}'></i>대한민국</span>"
+    st.markdown("<div class='kd-legend'>"
+                f"<span><i class='kd-dot' style='background:linear-gradient(90deg,{LOW},{HIGH})'></i>검역관리지역 (진할수록 감염병 많음)</span>"
+                f"<span><i class='kd-dot' style='background:{TARGET}'></i>주요 여행지</span>"
                 f"<span><i class='kd-dot' style='background:{SELECTED}'></i>선택한 나라</span></div>",
                 unsafe_allow_html=True)
-    ss["country_select"] = ss["country"]
-    st.selectbox("나라 직접 고르기", list(by_iso), key="country_select", index=None,
-                 placeholder="지도를 누르거나 여기서 고르세요", format_func=lambda i: by_iso[i].name_ko,
-                 on_change=on_country_select)
+    ss["country_select"] = ss["country"] if ss["country"] in choices else None
+    st.selectbox("나라 직접 고르기", choice_keys, key="country_select", index=None,
+                 placeholder="지도를 누르거나 여기서 고르세요 (지도에 없는 작은 나라 포함)",
+                 format_func=lambda k: choices[k], on_change=on_country_select)
 with right:
     with st.container(key="country_panel"):
         country_panel(ss["country"])

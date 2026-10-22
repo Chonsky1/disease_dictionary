@@ -1,5 +1,3 @@
-# EDA-only dependencies (service code in data_prep/ uses requests + stdlib only)
-requests==2.34.2
-python-dotenv==1.2.3
+# EDA-only dependencies (service code does not need these)
 pandas>=2.2
 matplotlib>=3.8
