@@ -1,0 +1,4 @@
+{
+  "_comment": "자동 해석이 틀린 감염병만 '감염병명(CSV 원문)': '위키백과 문서 제목'으로 적는다. data/processed/wiki_titles.json의 method가 search인 항목부터 확인한다.",
+  "_example": "(장관감염증) 노로바이러스 감염증 → 노로바이러스"
+}

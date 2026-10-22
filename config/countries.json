@@ -1,0 +1,16 @@
+{
+  "_comment": "지도에서 클릭할 수 있는 나라. 기획서의 주요 여행지 10개국 + 대한민국(국내 안내). iso3는 지도 국가 코드, lat/lon은 작은 나라도 누를 수 있게 찍는 마커 위치.",
+  "countries": [
+    {"iso3": "JPN", "name_ko": "일본", "lat": 36.2, "lon": 138.3},
+    {"iso3": "CHN", "name_ko": "중국", "lat": 35.9, "lon": 104.2},
+    {"iso3": "VNM", "name_ko": "베트남", "lat": 14.1, "lon": 108.3},
+    {"iso3": "THA", "name_ko": "태국", "lat": 15.9, "lon": 101.0},
+    {"iso3": "PHL", "name_ko": "필리핀", "lat": 12.9, "lon": 121.8},
+    {"iso3": "TWN", "name_ko": "대만", "lat": 23.7, "lon": 121.0},
+    {"iso3": "USA", "name_ko": "미국", "lat": 39.8, "lon": -98.6},
+    {"iso3": "IDN", "name_ko": "인도네시아", "lat": -2.5, "lon": 118.0},
+    {"iso3": "MYS", "name_ko": "말레이시아", "lat": 4.2, "lon": 102.0},
+    {"iso3": "SGP", "name_ko": "싱가포르", "lat": 1.35, "lon": 103.8},
+    {"iso3": "KOR", "name_ko": "대한민국", "lat": 36.5, "lon": 127.8, "home": true}
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "_comment": "검색·생성 품질에 영향을 주는 값. 코드 수정 없이 여기서 바꾸고 비교한다 (F2005, F2006, F2014).",
+
+  "chat_model": "gpt-4.1-mini",
+  "embedding_model": "text-embedding-3-small",
+  "_embedding_raw_text": "auto = OPENAI_BASE_URL(GMS 등 프록시)이 있으면 토큰 배열 대신 원문 전송. true/false로 강제 가능",
+  "embedding_raw_text": "auto",
+  "temperature": 0,
+
+  "chunk_size": 1000,
+  "chunk_overlap": 200,
+
+  "top_k": 5,
+  "search_type": "similarity",
+  "mmr_fetch_k": 30,
+  "mmr_lambda": 0.5,
+
+  "max_queries": 3,
+  "candidates_per_query": 5,
+  "max_selected_per_query": 2,
+
+  "condition_candidates": 20,
+
+  "meta_collection": "disease_meta",
+  "docs_collection": "disease_docs",
+  "chroma_dir": "data/chroma",
+
+  "wiki_min_interval_sec": 0.5,
+  "wiki_max_retries": 3
+}
