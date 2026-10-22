@@ -85,6 +85,8 @@ with left, st.container(key="detail_about"):
         st.markdown(f"{esc(d.display_name)}은(는) **제{d.grade}급 법정감염병**입니다.")
     st.markdown(f"<div class='kd-rule'><b>제{d.grade}급이란?</b> {esc(d.rule.get('desc', ''))}</div>",
                 unsafe_allow_html=True)
+    st.caption(f"급·신고 범위·KCD 출처: [질병관리청 감염병포털 법정감염병 분류]"
+               f"(https://dportal.kdca.go.kr/pot/ii/sttyInftnsds/sttyInftnsds.do) ({license_label('kdca_disease_list')})")
 with right, st.container(key="detail_world"):
     where = sorted((c for c in w.countries.values() if any(x.get("disease_id") == did for x in c.diseases)),
                    key=lambda c: c.name_ko)
