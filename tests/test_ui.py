@@ -47,7 +47,8 @@ class _UiBase(unittest.TestCase):
     def _app(self, indexed=True, env=ENV):
         rt = fake_runtime(self.tmp, indexed)
         self.patches = [mock.patch.dict(os.environ, env, clear=False),
-                        mock.patch.object(runtime_mod, "build_runtime", lambda *a, **k: rt)]
+                        mock.patch.object(runtime_mod, "build_runtime", lambda *a, **k: rt),
+                        mock.patch("data_prep.settings.PROCESSED", self.tmp)]   # 실제 수집 결과와 섞이지 않게
         for p in self.patches:
             p.start()
         self.addCleanup(lambda: [p.stop() for p in self.patches])
@@ -160,6 +161,67 @@ class LayoutTest(_UiBase):
         self.assertIn("fetch_quarantine", " ".join(i.value for i in at.info))
         at.selectbox(key="country_select").set_value("KOR").run()
         self.assertIn("감염병 질문하기", " ".join(m.value for m in at.markdown))
+
+
+class AgeSectionTest(_UiBase):
+    """연령별 알아보기: 세 화면, 정보 창, 질문하기 연결."""
+
+    def _app_with_stats(self, build: bool = True):
+        from tests.age_fixtures import build_sample, make_stats_dir
+        at, rt = self._app()
+        if build:
+            build_sample(self.tmp / "age_stats.json", make_stats_dir(self.tmp / "stats_in"))
+        return at, rt
+
+    def _panel(self, at) -> str:
+        return " ".join(m.value for m in at.markdown)
+
+    def test_before_build(self):
+        at, _ = self._app_with_stats(build=False)
+        at.run()
+        self.assertIn("scripts.build_age_stats", " ".join(c.value for c in at.code))
+        self.assertEqual(len(at.exception), 0)
+
+    def test_age_mode_panel_and_ask(self):
+        at, rt = self._app_with_stats()
+        at.run()
+        self.assertEqual(len(at.get("plotly_chart")), 2)              # 지도 + 연령대 막대
+        self.assertIn("수두", self._panel(at))                          # 0~4세 기본 선택 → 정보 창
+        self.assertIn("가장 많은 연령대", self._panel(at))
+        self.assertTrue(any("추정" in c.value for c in at.caption))   # 열 이름 추정 표시
+        at.select_slider(key="age_group").set_value("65세 이상").run()
+        self.assertIn("카바페넴내성장내세균목(CRE) 감염증", self._panel(at))
+        ask = next(b for b in at.button if b.key == "age_ask")
+        ask.click().run()
+        self.assertEqual(rt.by_id[at.session_state["disease"]].display_name, "카바페넴내성장내세균목(CRE) 감염증")
+        self.assertEqual(len(at.exception), 0)
+
+    def test_to_distribution_and_sari(self):
+        at, _ = self._app_with_stats()
+        at.run()
+        next(b for b in at.button if b.key == "age_to_dist").click().run()
+        self.assertEqual(at.session_state["age_mode"], "감염병별 연령 분포")
+        self.assertEqual(at.session_state["age_disease"], "notifiable|수두")
+        self.assertIn("10세 미만 93%", self._panel(at))
+        at.selectbox(key="age_disease").set_value("sti|임질").run()
+        self.assertIn("20~24세", self._panel(at))
+        at.selectbox(key="age_disease").set_value("sari").run()
+        self.assertIn("2025-2026절기 입원환자", self._panel(at))
+        self.assertEqual(len(at.exception), 0)
+
+    def test_trend_mode(self):
+        at, _ = self._app_with_stats()
+        at.run()
+        at.radio(key="age_mode").set_value("유행 시기").run()
+        panel = self._panel(at)
+        self.assertIn("인플루엔자", panel)
+        self.assertIn("2024-2025절기 · 1주 · 99.8", panel)
+        at.selectbox(key="trend_id").set_value("yw_수족구병").run()
+        self.assertIn("보통 **7월 전후**", self._panel(at))
+        at.selectbox(key="trend_id").set_value("pw_급성호흡기감염증").run()
+        at.selectbox(key="trend_item").set_value("호흡기세포융합바이러스").run()
+        self.assertTrue(any(b.key == "trend_ask" for b in at.button))
+        self.assertEqual(len(at.exception), 0)
 
 
 def write_sample_watch(path: Path) -> None:

@@ -66,6 +66,8 @@ E101 에볼라병 발생지역 입국자, L101 라싸열, M101 원숭이두창, 
 python -m scripts.fetch_quarantine
 # API 승인 전: 파일데이터 CSV를 내려받아
 python -m scripts.fetch_quarantine --csv data/raw/csv/검역관리지역정보.csv
+# 변환표·별칭만 고쳤을 때: API 호출 없이 저장된 원본으로 다시 만들기
+python -m scripts.fetch_quarantine --raw
 ```
 
 결과 `data/processed/country_watch.json`을 화면이 바로 읽는다 (Streamlit 새로고침).

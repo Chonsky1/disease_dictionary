@@ -1,4 +1,4 @@
-# 법정감염병 안내 도우미 (단계 1)
+# 법정감염병 안내 도우미
 
 법정감염병 133종에 대한 질문에 **감염병포털 목록 + 한국어 위키백과**를 근거로 답하고,
 답변에 쓴 근거의 제목과 원문 출처를 함께 보여 주는 RAG 서비스입니다.
@@ -14,7 +14,7 @@ source venv/Scripts/activate        # macOS/Linux: source venv/bin/activate
 export PYTHONUTF8=1                 # 한글 인코딩 오류 예방 (~/.bashrc에 넣어 두면 편함)
 pip install -r requirements.txt
 cp .env.example .env                # OPENAI_API_KEY, WIKI_USER_AGENT 입력
-python -m unittest discover -s tests -t .   # 키·네트워크 없이 49개 테스트
+python -m unittest discover -s tests -t .   # 키·네트워크 없이 69개 테스트
 ```
 
 ## 2. 색인 → 실행
@@ -25,6 +25,8 @@ python -m scripts.wiki_demo 홍역               # 위키백과 연결 확인 (p
 python -m scripts.build_index                  # 133건 메타데이터 색인 (위키 제목 해석·본문 수집 포함, 첫 실행 2~3분)
 python -m scripts.build_index --prefetch-docs  # (선택) 133개 항목 문서를 미리 색인 → 첫 질문이 빨라짐
 python -m scripts.fetch_quarantine             # 나라별 검역감염병 수집 (…/QuarantineRegion/NationDisease, 또는 --csv 파일데이터)
+python -m scripts.fetch_quarantine --raw       # (선택) API 호출 없이 마지막 저장 원본으로 다시 만들기 (변환표 수정 후 등)
+python -m scripts.build_age_stats              # 연령별·시기별 통계 (data/raw/stats/의 감염병포털 CSV·xlsx → age_stats.json)
 streamlit run ui/app.py                        # 반드시 kdca-rag 폴더에서 실행 (.streamlit/config.toml 적용)
 ```
 
@@ -49,6 +51,8 @@ streamlit run ui/app.py                        # 반드시 kdca-rag 폴더에서
 | | `ui/static/topojson/` | 지도 경계 파일 (CDN이 막힌 망에서도 지도가 보이도록 앱과 함께 제공) |
 | 서비스 | `service/countries.py` | 지도용 나라 목록, `data/processed/country_watch.json` 읽기 |
 | 데이터 준비 | `data_prep/quarantine.py`, `scripts/fetch_quarantine.py` | 검역관리지역 API·CSV → 현재 지정만 → 나라·감염병 매핑 → country_watch.json ([분석](docs/QUARANTINE_API.md)) |
+| 데이터 준비 | `data_prep/age_stats.py`, `xlsx_lite.py`, `scripts/build_age_stats.py` | 감염병포털 통계 CSV·xlsx → 연령대·성별 분포, 주별 유행 추이 → age_stats.json ([분석](docs/AGE_STATS.md)) |
+| 서비스·UI | `service/age.py`, `ui/age_view.py` | 연령대별 상위 감염병, 연령 분포, 유행 시기 계산과 차트 |
 | 설정 | `config/rag_settings.json` | 청크 크기·중복, Top-k, 검색 방식, 모델 |
 
 ## 4. 컬렉션과 청크 규칙
@@ -81,4 +85,5 @@ streamlit run ui/app.py                        # 반드시 kdca-rag 폴더에서
 | 법정감염병 목록 133건 | [질병관리청 감염병포털](https://dportal.kdca.go.kr/pot/ii/sttyInftnsds/sttyInftnsds.do) | 공공누리 유형 확인 후 기록 |
 | 감염병 설명 문서 | [한국어 위키백과](https://ko.wikipedia.org) | CC BY-SA 4.0, 근거마다 제목·원문 링크 표시 |
 | 나라별 검역감염병 | [질병관리청_검역관리지역정보](https://www.data.go.kr/data/15139251/openapi.do) | 이용허락범위 제한 없음, 화면에 기준일·출처 표시 |
+| 연령별·시기별 통계 | [질병관리청 감염병포털](https://dportal.kdca.go.kr) 기본통계·표본감시 | 공공누리 유형 확인 후 기록, 화면에 출처·신고 건수 기준 표시 |
 | 지도 경계 | [sane-topojson](https://github.com/etpinard/sane-topojson) (Natural Earth) | MIT / public domain |

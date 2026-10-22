@@ -54,8 +54,10 @@ class PoliteSession:
             else:
                 if resp.status_code not in RETRY_STATUS:
                     if resp.status_code >= 400:
+                        body = " ".join((getattr(resp, "text", "") or "").split())[:200]   # 서버가 알려 준 이유 (Forbidden 등)
                         raise requests.HTTPError(
-                            f"HTTP {resp.status_code}: {mask_secrets(resp.url)}", response=resp
+                            f"HTTP {resp.status_code}: {mask_secrets(resp.url)}"
+                            + (f"\n    응답: {mask_secrets(body)}" if body else ""), response=resp
                         )
                     return resp
                 last_error = f"HTTP {resp.status_code}"

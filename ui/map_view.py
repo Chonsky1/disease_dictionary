@@ -6,6 +6,10 @@
 """
 from __future__ import annotations
 
+import json
+from functools import lru_cache
+from pathlib import Path
+
 import plotly.graph_objects as go
 
 from service.countries import Country, WatchData
@@ -27,7 +31,26 @@ def _count_text(n: int, loaded: bool) -> str:
     return f"검역감염병 {n}종 지정" if n else "현재 지정 없음"
 
 
-def build_world_map(markers: list[Country], watch: WatchData, selected: str | None, height: int = 370) -> go.Figure:
+POINTS_PATH = Path(__file__).resolve().parents[1] / "config" / "country_points.json"
+
+
+@lru_cache(maxsize=1)
+def load_points(path: Path = POINTS_PATH) -> dict[str, tuple[float, float]]:
+    """ISO-3 → (위도, 경도). 110m 지도 경계에 모양이 없는 작은 나라용."""
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return {}
+    return {k: (float(v[0]), float(v[1])) for k, v in data.items() if not k.startswith("_")}
+
+
+def _mix(a: str, b: str, t: float) -> str:
+    ca, cb = [int(a[i:i + 2], 16) for i in (1, 3, 5)], [int(b[i:i + 2], 16) for i in (1, 3, 5)]
+    return "#" + "".join(f"{round(x + (y - x) * t):02x}" for x, y in zip(ca, cb))
+
+
+def build_world_map(markers: list[Country], watch: WatchData, selected: str | None, height: int = 370,
+                    points: dict[str, tuple[float, float]] | None = None) -> go.Figure:
     counts = {c.iso3: len(c.diseases) for c in watch.countries.values() if c.iso3}
     names = {c.iso3: c.name_ko for c in watch.countries.values() if c.iso3}
     names.update({m.iso3: m.name_ko for m in markers})
@@ -35,8 +58,8 @@ def build_world_map(markers: list[Country], watch: WatchData, selected: str | No
 
     # 1) 지정 국가: 검역감염병 수로 색칠
     shaded = sorted(counts)
+    top = max(counts.values(), default=1)
     if shaded:
-        top = max(counts.values())
         fig.add_trace(go.Choropleth(
             locations=shaded, z=[counts[i] for i in shaded], locationmode="ISO-3",
             customdata=[[i, names[i], _count_text(counts[i], True)] for i in shaded],
@@ -62,7 +85,20 @@ def build_world_map(markers: list[Country], watch: WatchData, selected: str | No
             colorscale=[[0, SELECTED], [1, SELECTED]], showscale=False, marker_line_color="#ffffff",
             marker_line_width=1.2, hovertemplate=HOVER, selected=_KEEP, unselected=_KEEP, name="선택"))
 
-    # 4) 점 마커
+    # 4) 지도 경계에 모양이 없는 작은 지정 국가(섬 등): 감염병 수 색의 작은 점으로 표시해 누를 수 있게
+    pts = load_points() if points is None else points
+    marker_iso = {m.iso3 for m in markers}
+    small = [i for i in shaded if i in pts and i not in marker_iso]
+    if small:
+        def shade(i: str) -> str:
+            return SELECTED if i == selected else _mix(LOW, HIGH, (counts[i] - 1) / max(top - 1, 1))
+        fig.add_trace(go.Scattergeo(
+            lat=[pts[i][0] for i in small], lon=[pts[i][1] for i in small], mode="markers",
+            customdata=[[i, names[i], _count_text(counts[i], True)] for i in small],
+            marker={"size": 7, "color": [shade(i) for i in small], "line": {"color": HIGH, "width": 1}},
+            hovertemplate=HOVER, selected=_KEEP, unselected=_KEEP, name="작은 지정 국가 점"))
+
+    # 5) 주요 여행지 점 마커
     def color(m: Country) -> str:
         return SELECTED if m.iso3 == selected else (HOME if m.home else TARGET)
     fig.add_trace(go.Scattergeo(

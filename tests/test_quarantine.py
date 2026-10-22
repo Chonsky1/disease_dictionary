@@ -104,6 +104,55 @@ class FetchScriptTest(unittest.TestCase):
             resolve_endpoint("https://apis.data.go.kr/1790387/QuarantineRegion/DiseaseNation")
         self.assertIn("NationDisease", str(ctx.exception))
 
+    def test_raw_mode_rebuilds_without_api(self):
+        with self.assertRaises(SystemExit) as ctx:                     # 저장본이 없으면 안내
+            self._run(["--raw"])
+        self.assertIn("먼저", str(ctx.exception))
+        with mock.patch.dict("os.environ", {"DATA_GO_KR_SERVICE_KEY": "k"}), \
+                mock.patch("data_prep.kdca_api.fetch_all", lambda *a, **k: api_items()):
+            self._run(["--date", "2026-10-22"])                        # API 수집 → 원본 저장
+        first = (self.tmp / "country_watch.json").read_text(encoding="utf-8")
+        (self.tmp / "country_watch.json").unlink()
+
+        def no_api(*a, **k):
+            raise AssertionError("--raw 인데 API를 불렀습니다")
+        with mock.patch("data_prep.kdca_api.fetch_all", no_api):
+            self.assertEqual(self._run(["--raw", "--date", "2026-10-22"]), 0)
+            raw = next((self.tmp / "raw" / "quarantine_area").glob("*.json"))
+            self.assertEqual(self._run(["--raw", str(raw), "--date", "2026-10-22"]), 0)   # 경로 지정
+        again = json.loads((self.tmp / "country_watch.json").read_text(encoding="utf-8"))
+        self.assertEqual(again["countries"], json.loads(first)["countries"])           # 같은 결과
+        self.assertIn("저장본", again["collected_from"])
+
+    def test_http_403_guidance(self):
+        import requests
+        resp = requests.Response()
+        resp.status_code = 403
+        err = requests.HTTPError("HTTP 403: https://apis.data.go.kr/x?serviceKey=***\n    응답: Forbidden", response=resp)
+
+        def fake_fetch(*a, **k):
+            raise err
+        with mock.patch.dict("os.environ", {"DATA_GO_KR_SERVICE_KEY": "abc%2B"}), \
+                mock.patch("data_prep.kdca_api.fetch_all", fake_fetch):
+            with self.assertRaises(SystemExit) as ctx:
+                self._run(["--date", "2026-10-22"])
+        msg = str(ctx.exception)
+        self.assertIn("활용신청", msg)
+        self.assertIn("Decoding", msg)
+        self.assertIn("--csv", msg)
+
+    def test_http_error_shows_body(self):
+        import requests
+        from data_prep.http_client import PoliteSession
+        resp = requests.Response()
+        resp.status_code, resp.url, resp._content = 403, "https://x/y?serviceKey=SECRET", b"Forbidden"
+        s = PoliteSession("t", min_interval=0, sleep=lambda _: None)
+        s.session = mock.Mock(get=mock.Mock(return_value=resp))
+        with self.assertRaises(requests.HTTPError) as ctx:
+            s.get("https://x/y")
+        self.assertIn("응답: Forbidden", str(ctx.exception))
+        self.assertNotIn("SECRET", str(ctx.exception))
+
     def test_api_mode_params_and_todo(self):
         with mock.patch.dict("os.environ", {"DATA_GO_KR_SERVICE_KEY": "k"}):
             seen = {}
@@ -121,6 +170,42 @@ class FetchScriptTest(unittest.TestCase):
         watch = json.loads((self.tmp / "country_watch.json").read_text(encoding="utf-8"))
         self.assertEqual(len(watch["countries"]), 4)
         self.assertTrue(list((self.tmp / "raw" / "quarantine_area").glob("*.json")))   # 원본 저장
+
+
+class CountryNameTest(unittest.TestCase):
+    """실제 수집(2026-10-22, 970건)에서 지도에 못 올렸던 30개 이름."""
+    REPORTED = ["과들루프", "남아프리카", "러시아연방", "마르티니크", "마요트", "마이크로네시아(코스라이제도)", "미국령버진제도",
+                "버뮤다제도", "생바르텔레미", "세이쉴", "세인트마틴섬", "세인트킷츠네비스", "솔로몬아일랜드", "신트마르턴",
+                "아랍에미레이트", "아루바", "아프카니스탄", "안굴라", "영국령버진제도", "왈리,푸트나제도", "우르과이", "쿠크제도",
+                "키르바시", "키르키즈스탄", "터크스", "토켈로", "튀니지아", "튀르키예공화국", "트발루", "프랑스령폴리네시아"]
+
+    def test_reported_names_mapped(self):
+        from data_prep.quarantine import load_country_codes, name_key
+        codes = load_country_codes(paths.CONFIG / "country_names_ko.json")
+        missing = [n for n in self.REPORTED if name_key(n) not in codes]
+        self.assertEqual(missing, [])
+        self.assertEqual(codes[name_key("러시아연방")], "RUS")
+        self.assertEqual(codes[name_key("왈리,푸트나제도")], "WLF")
+
+    def test_every_code_visible_on_map(self):
+        """모든 ISO-3 코드가 지도 경계에 있거나 점 좌표가 있어야 한다 (안 보이는 나라 없음)."""
+        from data_prep.quarantine import load_country_codes
+        from ui.map_view import load_points
+        topo = json.loads((paths.ROOT / "ui" / "static" / "topojson" / "world_110m.json").read_text(encoding="utf-8"))
+        shapes = {g.get("id") for g in topo["objects"]["countries"]["geometries"]}
+        codes = set(load_country_codes(paths.CONFIG / "country_names_ko.json").values())
+        self.assertEqual(sorted(codes - shapes - set(load_points())), [])
+
+    def test_small_islands_drawn_as_points(self):
+        from service.countries import CountryWatch, WatchData
+        from ui.map_view import SELECTED, build_world_map
+        watch = WatchData(True, "2026-10-22", "t", "", {
+            "PYF": CountryWatch("PYF", "프랑스령폴리네시아", "PYF", [{"name": "뎅기열"}]),
+            "TUN": CountryWatch("TUN", "튀니지", "TUN", [{"name": "콜레라"}, {"name": "황열"}])})
+        fig = build_world_map([], watch, "PYF")
+        dots = next(t for t in fig.data if t.name == "작은 지정 국가 점")
+        self.assertEqual([c[0] for c in dots.customdata], ["PYF"])      # 경계가 있는 튀니지는 영역으로만
+        self.assertEqual(dots.marker.color[0], SELECTED)
 
 
 if __name__ == "__main__":

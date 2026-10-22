@@ -3,6 +3,8 @@
 python -m scripts.fetch_quarantine                      # Open API (기본: …/QuarantineRegion/NationDisease)
 python -m scripts.fetch_quarantine --endpoint https://apis.data.go.kr/…   # 요청주소를 바꿔야 할 때만
 python -m scripts.fetch_quarantine --csv 파일.csv        # 파일데이터 CSV로 대신 (API 승인 전·장애 시)
+python -m scripts.fetch_quarantine --raw                # API 호출 없이 가장 최근 저장 원본으로 다시 만들기
+python -m scripts.fetch_quarantine --raw data/raw/api/quarantine_area/20261022.json   # 특정 날짜 원본
 python -m scripts.fetch_quarantine --date 2026-10-22    # 기준일 지정 (기본: 오늘)
 
 결과: data/raw/api/quarantine_area/<날짜>.json (API 원본), data/processed/country_watch.json,
@@ -64,7 +66,9 @@ def _from_api(max_pages: int, endpoint: str | None) -> tuple[list, str]:
     api.setdefault("page_size", 100)
     api["endpoint"] = resolve_endpoint(api.get("endpoint"))
     print(f"[api] 요청주소 {api['endpoint']}")
-    key = paths.env("DATA_GO_KR_SERVICE_KEY", required=True)
+    key = paths.env("DATA_GO_KR_SERVICE_KEY", required=True).strip().strip('"').strip("'")
+    if "%" in key:
+        print("[!] 인증키에 '%'가 있습니다. Encoding 키로 보입니다. 마이페이지의 'Decoding' 키로 바꿔 보세요.")
     try:
         items = fetch_all(src, PoliteSession("kdca-rag/0.1", min_interval=0.3), key, max_pages=max_pages)
     except ApiError as exc:
@@ -72,6 +76,21 @@ def _from_api(max_pages: int, endpoint: str | None) -> tuple[list, str]:
                 "    102·30번대(인증·미등록 키)면 Decoding 키 사용 여부와 활용신청 승인 상태를 확인하세요.\n"
                 "    22번(호출 한도 초과)이면 내일 다시 시도하거나 --csv 파일데이터를 쓰세요.")
         raise SystemExit(f"[x] API 오류: {exc}\n{hint}")
+    except requests.HTTPError as exc:
+        code = exc.response.status_code if exc.response is not None else None
+        if code in (401, 403):
+            hint = ("    data.go.kr 게이트웨이가 이 키로 이 서비스를 쓰는 것을 막았습니다 (네트워크 문제 아님). 확인 순서:\n"
+                    "    1) 마이페이지 > 활용신청 현황에 '질병관리청_검역관리지역정보'가 '승인'인가 (다른 API 키 승인과 별개)\n"
+                    "    2) 승인 직후라면 키가 게이트웨이에 반영되기까지 1~2시간 기다린 뒤 재시도\n"
+                    "    3) .env의 DATA_GO_KR_SERVICE_KEY가 'Decoding' 키인가 (Encoding 키는 %2B·%3D가 이중 인코딩됨),\n"
+                    "       앞뒤 공백·따옴표가 없는가\n"
+                    "    4) 그래도 안 되면 마이페이지의 '미리보기/요청 테스트'가 되는지 확인. 거기서도 403이면 포털 문의\n"
+                    "    당장은 파일데이터 CSV(https://www.data.go.kr/data/3074726/fileData.do)를 받아 --csv 로 실행하세요.")
+        elif code == 404:
+            hint = "    요청주소가 …/QuarantineRegion/NationDisease 인지 확인하세요."
+        else:
+            hint = "    잠시 뒤 다시 시도하거나 --csv 로 파일데이터를 쓰세요."
+        raise SystemExit(f"[x] HTTP 오류: {exc}\n{hint}")
     except requests.RequestException as exc:
         raise SystemExit(f"[x] 연결 실패: {exc}\n"
                          "    인터넷 연결·사내망 프록시를 확인하거나, 파일데이터를 받아 --csv 로 실행하세요.")
@@ -79,6 +98,31 @@ def _from_api(max_pages: int, endpoint: str | None) -> tuple[list, str]:
                                                             "params": src["api"].get("params", {})})
     print(f"[api] {len(items)}건 수집 → {_show(raw)}")
     return from_api_items(items), "Open API"
+
+
+RAW_DIR_NAME = "quarantine_area"
+
+
+def latest_raw() -> Path:
+    files = sorted((paths.RAW_API / RAW_DIR_NAME).glob("*.json"))
+    if not files:
+        raise SystemExit(f"[x] 저장된 API 원본이 없습니다 ({_show(paths.RAW_API / RAW_DIR_NAME)}).\n"
+                         "    먼저 python -m scripts.fetch_quarantine 로 한 번 수집하세요.")
+    return files[-1]   # 파일명이 YYYYMMDD.json이라 이름순 마지막이 최신
+
+
+def _from_raw(path: Path | None) -> tuple[list, str]:
+    """API를 다시 부르지 않고 저장된 원본(data/raw/api/quarantine_area/*.json)으로 다시 만든다."""
+    p = path or latest_raw()
+    if not p.exists():
+        raise SystemExit(f"[x] 파일이 없습니다: {p}")
+    data = json.loads(p.read_text(encoding="utf-8"))
+    items = data.get("items") if isinstance(data, dict) else data
+    if not isinstance(items, list):
+        raise SystemExit(f"[x] {p.name}에 items 목록이 없습니다. fetch_quarantine가 저장한 원본 파일인지 확인하세요.")
+    fetched = str(data.get("fetched_at", ""))[:10] if isinstance(data, dict) else ""
+    print(f"[raw] {_show(p)}: {len(items)}건" + (f" (수집일 {fetched})" if fetched else ""))
+    return from_api_items(items), f"Open API 저장본 {fetched or p.stem}"
 
 
 def _from_csv(path: Path) -> tuple[list, str]:
@@ -90,14 +134,22 @@ def _from_csv(path: Path) -> tuple[list, str]:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--csv", type=Path)
+    src = ap.add_mutually_exclusive_group()
+    src.add_argument("--csv", type=Path, help="파일데이터 CSV로 만들기")
+    src.add_argument("--raw", nargs="?", const="latest", metavar="JSON",
+                     help="API를 부르지 않고 저장된 원본으로 다시 만들기 (경로 생략 시 가장 최근 것)")
     ap.add_argument("--endpoint", help="API 요청주소 (config/sources.json 대신)")
     ap.add_argument("--date", help="기준일 YYYY-MM-DD (이 날짜에 지정 중인 것만)")
     ap.add_argument("--max-pages", type=int, default=50)
     args = ap.parse_args(argv)
     paths.ensure_dirs()
 
-    records, label = _from_csv(args.csv) if args.csv else _from_api(args.max_pages, args.endpoint)
+    if args.csv:
+        records, label = _from_csv(args.csv)
+    elif args.raw:
+        records, label = _from_raw(None if args.raw == "latest" else Path(args.raw))
+    else:
+        records, label = _from_api(args.max_pages, args.endpoint)
     today = date.fromisoformat(args.date) if args.date else date.today()
     watch, st = build_watch(records, load_diseases(paths.DISEASES_CSV),
                             load_country_codes(paths.CONFIG / "country_names_ko.json"),

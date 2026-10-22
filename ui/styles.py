@@ -43,6 +43,9 @@ html { scroll-behavior: smooth; }
 .st-key-map_card { border: 1.5px solid var(--kd-line); border-radius: 16px; overflow: hidden; background: var(--kd-soft); }
 .st-key-country_panel { border: 2px solid var(--kd-navy); border-radius: 22px; padding: 18px 18px 10px;
   background:#ffffff; min-height: 372px; }
+.st-key-age_panel { border: 2px solid var(--kd-navy); border-radius: 22px; padding: 16px 16px 8px;
+  background:#ffffff; min-height: 300px; }
+.st-key-age_card .stSlider { padding-right: 12px; }
 .kd-country-name { font-size: 1.35rem; font-weight: 700; color: var(--kd-navy); margin-bottom: .2rem; }
 .kd-chip { display:inline-block; margin: 0 6px 6px 0; padding: 3px 10px; border-radius: 999px;
   background: #e8f4f3; color: #1f6f66; font-size: .85rem; }
