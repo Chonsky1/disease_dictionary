@@ -137,6 +137,17 @@ class MeterTest(unittest.TestCase):
         self.assertIn("검색어", describe(s))
 
 
+class WarmupTest(unittest.TestCase):
+    def test_warmup_embeds_once_in_background(self):
+        from unittest import mock
+        from service.runtime import warmup
+        store = mock.Mock()
+        warmup(store).join(5)
+        store.docs.embeddings.embed_query.assert_called_once()
+        store.docs.embeddings.embed_query.side_effect = RuntimeError("네트워크")
+        warmup(store).join(5)          # 실패해도 예외 없이 끝남
+
+
 class QuotaTest(unittest.TestCase):
     def test_quota_detection(self):
         from scripts.bench_chat import is_quota

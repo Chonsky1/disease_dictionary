@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 from dataclasses import dataclass
 
 from data_prep import settings as paths
@@ -71,4 +72,18 @@ def build_runtime(settings: dict | None = None, llm=None, embeddings=None, wiki_
         cache = AnswerCache(paths.CACHE / "answer_cache.json")
     svc = RagServices(llm=llm, store=store, collector=collector, diseases=by_id,
                       wiki_titles=load_titles(paths.WIKI_TITLES), settings=settings, aux_llm=aux, answer_cache=cache)
+    if settings.get("warmup", True) and collect:
+        warmup(store)
     return Runtime(settings, diseases, by_id, store, svc, build_graph(svc))
+
+
+def warmup(store) -> threading.Thread:
+    """임베딩 연결을 미리 열어 둔다 (실측: 첫 근거 검색 2.4~2.7초 → 이후 0.2~0.3초). 질문을 기다리게 하지 않게 배경에서."""
+    def job():
+        try:
+            store.docs.embeddings.embed_query("감염병")
+        except Exception:  # noqa: BLE001 - 실패해도 첫 질문이 조금 느릴 뿐
+            logging.getLogger("kdca_rag").debug("임베딩 예열 실패", exc_info=True)
+    t = threading.Thread(target=job, name="warmup", daemon=True)
+    t.start()
+    return t

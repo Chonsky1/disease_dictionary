@@ -54,7 +54,33 @@ GMS·위키백과에 접속할 수 없는 환경이라, 가짜 LLM·위키·임�
   오른쪽 요약의 LLM 호출이었다 → `summary_llm: false`로 해결.
 - 따라서 **Streamlit을 다른 수단(FastAPI+JS 등)으로 바꿔도 줄어드는 시간은 0.1초 미만**이다. 시간은 거의 전부 LLM·위키 호출에서 나온다.
 
-### 3-2. 실제 측정 (2026-10-22, SSAFY GMS·위키백과, gpt-4.1-mini)
+### 3-2. 최종 실측 (2026-10-22 16:09, `bench_chat --quick`, SSAFY GMS·위키백과, gpt-4.1-mini)
+
+| 설정 | cold 총 | cold 첫 글자 | warm 총 | warm 첫 글자 | 평균 | LLM 호출 cold/warm | 위키 호출 cold | 기존 대비 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| baseline (기존) | 18.09s | 18.09s | 18.86s | 18.86s | 18.48s | 5 / 5 | 7 | - |
+| background (기본값) | 8.49s | 6.97s | 2.44s | 1.42s | 5.46s | 1 / 1 | 2 | **70% 단축** |
+| **prefetch** (+ 문서 미리 색인) | 6.95s | 3.27s | 2.18s | **1.10s** | **4.57s** | 1 / 1 | 0 | **75% 단축** |
+
+단계별 평균 (초): 검색어 · 수집 · 근거 검색 · 답변
+
+| 설정 | cold | warm |
+| --- | --- | --- |
+| baseline | 1.1 · **12.8** · 0.3 · 3.8 | 2.6 · **12.4** · 0.3 · 3.6 |
+| background | 0.0 · 3.3 · **2.7** · 2.4 | 0.0 · 0.0 · 0.3 · 2.1 |
+| prefetch | 0.0 · 0.0 · **2.4** · 4.5 | 0.0 · 0.0 · 0.2 · 1.9 |
+
+성과
+- **질문당 평균 18.48초 → 4.57초 (75% 단축)**, 첫 글자까지 18초대 → warm 1.1초 / cold 3.3초.
+- LLM 호출 질문당 5회 → 1회 (같은 질문 반복은 0회, 저장된 답).
+- 기존 시간의 70%가 '수집'(12.8초)이었고, 이를 질문 경로에서 빼서 얻은 효과가 가장 크다.
+- 남은 병목: 작업 공간마다 **첫 근거 검색이 2.4~2.7초**(이후 0.2~0.3초) → 임베딩 연결을 처음 여는 비용.
+  앱 시작 때 임베딩을 배경에서 한 번 호출해 연결을 미리 열도록 했다(`warmup`, `service/runtime.py`).
+  이 측정 뒤에 넣은 변경이라 표에는 아직 반영되지 않았다.
+- 측정 중 'prefetch' 단계 직전에 보인 `배경 수집 실패 … FileNotFoundError`는 측정 스크립트가 배경 수집이 끝나기 전에
+  임시 폴더를 지워서 생긴 것으로, 앱 동작과는 무관하다(스크립트 수정 완료).
+
+### 3-3. 첫 실측 (2026-10-22 15:2x, 전체 설정, 한도 초과로 중단)
 
 `python -m scripts.bench_chat` 결과. when_needed 세 번째 감염병에서 **GMS 사용 한도 초과(429 `organization_spend_limit_exceeded`)**로
 중단되어 background·cache·prefetch는 측정하지 못했다.
@@ -78,7 +104,7 @@ GMS·위키백과에 접속할 수 없는 환경이라, 가짜 LLM·위키·임�
 **LLM이 필요 없는 항목 자체 위키 문서 1건만 바로 색인**해서 답한다(답변 LLM 1회). 이 경로의 실제 시간은 한도가 열린 뒤
 `python -m scripts.bench_chat --quick`(baseline·background·prefetch만, 사용량 절약)으로 측정한다.
 
-### 3-3. 측정 방법
+### 3-4. 측정 방법
 
 ```bash
 python -m scripts.bench_chat --quick                                 # baseline·background·prefetch만 (권장, 사용량 절약)
@@ -95,13 +121,14 @@ python -m scripts.bench_chat --configs baseline,background --aux-model gpt-4.1-n
 
 | 설정 | 값 | 이유 |
 | --- | --- | --- |
-| `collect_policy` | `background` | 실측에서 수집을 건너뛴 질문 2.4초 vs 수집하는 질문 20~50초. 처음 묻는 감염병도 항목 문서 1건만 바로 색인하고 답함 |
+| `collect_policy` | `background` | 최종 실측 평균 18.48초 → 5.46초. 처음 묻는 감염병도 항목 문서 1건만 바로 색인하고 답함 |
 | `parallel_collect` | `true` | 배경·첫 수집 시간 32% 단축(실측), 결과는 순차와 같음(테스트) |
 | `stream_answer` | `true` | 수집을 뺀 질문에서 첫 글자 1.4초(실측) |
 | `answer_cache` | `true` | 같은 질문 즉시, LLM 호출 0 → 한도 절약에도 도움 |
 | `summary_llm` | `false` | 질문당 LLM 1회 절약 |
 | `aux_model` | `""` | 한도 초과로 비교 못 함. 한도가 열리면 `--aux-model`로 비교 후 결정 |
-| 문서 미리 색인 | 권장 | `build_index --prefetch-docs` 한 번이면 모든 첫 질문이 2초대 경로로 |
+| 문서 미리 색인 | **권장 (최종 선택)** | `build_index --prefetch-docs` 한 번이면 평균 4.57초, 첫 글자 cold 3.3초·warm 1.1초 |
+| `warmup` | `true` | 앱 시작 때 임베딩 연결을 미리 열어 첫 근거 검색 2.4초를 없앰 |
 
 참고: background는 수집을 **뒤로 미룰 뿐** 수집 LLM 호출 수는 같다. GMS 한도가 빠듯하면 `max_queries`를 3 → 1~2로 줄이면
 배경 수집의 LLM 호출이 함께 줄어든다.

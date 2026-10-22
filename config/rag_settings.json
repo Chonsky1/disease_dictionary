@@ -31,6 +31,8 @@
   "answer_cache": true,
   "_summary_llm": "질문하기 페이지 오른쪽 요약을 LLM으로 (false면 답의 '핵심 답변'으로, LLM 호출 없음)",
   "summary_llm": false,
+  "_warmup": "앱 시작 때 임베딩 연결을 미리 열어 첫 근거 검색 지연(실측 2.4초)을 없앰",
+  "warmup": true,
 
   "meta_collection": "disease_meta",
   "docs_collection": "disease_docs",

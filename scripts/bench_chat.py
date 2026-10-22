@@ -163,6 +163,7 @@ def bench_config(name: str, overrides: dict, args, lat: dict, rows: list[dict], 
         settings["aux_model"] = args.aux_model
     for r in range(args.rounds):
         root = Path(tempfile.mkdtemp(prefix="bench_"))
+        rt = None
         try:
             ws, build = make_workspace(root, args.fake)
             if args.fake:
@@ -198,12 +199,15 @@ def bench_config(name: str, overrides: dict, args, lat: dict, rows: list[dict], 
                       f"LLM {cold['llm_calls']}) · warm {warm['wall_s']:6.2f}s (첫 글자 {warm['first_token_s']:.2f}s, "
                       f"LLM {warm['llm_calls']})" + (f" · 반복 {row['repeat']['wall_s']:.2f}s" if 'repeat' in row else ""))
         finally:
+            _wait_background(rt)   # 마지막 warm 질문이 시작한 배경 수집이 끝난 뒤 임시 폴더를 지운다
             shutil.rmtree(root, ignore_errors=True)
     return rows
 
 
 def _wait_background(rt, timeout: float = 120) -> None:
     import threading
+    if rt is None:
+        return
     t0 = time.time()
     while rt.services.background and time.time() - t0 < timeout:
         time.sleep(0.1)

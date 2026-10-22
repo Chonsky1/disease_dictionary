@@ -16,7 +16,7 @@ source venv/Scripts/activate        # macOS/Linux: source venv/bin/activate
 export PYTHONUTF8=1                 # 한글 인코딩 오류 예방 (~/.bashrc에 넣어 두면 편함)
 pip install -r requirements.txt
 cp .env.example .env                # OPENAI_API_KEY, WIKI_USER_AGENT 입력
-python -m unittest discover -s tests -t .   # 키·네트워크 없이 86개 테스트
+python -m unittest discover -s tests -t .   # 키·네트워크 없이 87개 테스트
 ```
 
 ## 2. 색인 → 실행
@@ -25,7 +25,7 @@ python -m unittest discover -s tests -t .   # 키·네트워크 없이 86개 테
 python -m scripts.check_openai                 # OpenAI/GMS 연결 점검 (채팅·임베딩 각각)
 python -m scripts.wiki_demo 홍역               # 위키백과 연결 확인 (page.exists / summary / sections / search)
 python -m scripts.build_index                  # 133건 메타데이터 색인 (위키 제목 해석·본문 수집 포함, 첫 실행 2~3분)
-python -m scripts.build_index --prefetch-docs  # (권장) 133개 항목 문서를 미리 색인 → 첫 질문도 LLM 1회로 빨라짐
+python -m scripts.build_index --prefetch-docs  # (권장) 133개 항목 문서를 미리 색인 → 질문당 평균 4.6초 (docs/PERFORMANCE.md)
 python -m scripts.fetch_quarantine             # 나라별 검역감염병 수집 (…/QuarantineRegion/NationDisease, 또는 --csv 파일데이터)
 python -m scripts.fetch_quarantine --raw       # (선택) API 호출 없이 마지막 저장 원본으로 다시 만들기 (변환표 수정 후 등)
 python -m scripts.build_age_stats              # 연령별·시기별 통계 (data/raw/stats/의 감염병포털 CSV·xlsx → age_stats.json)
@@ -108,6 +108,7 @@ streamlit run ui/app.py                        # 반드시 프로젝트 폴더�
 | 2026-10-22 | 화면 개편: 상단 내비게이션, 한 페이지 3섹션, 클릭 가능한 세계 지도 (지도 경계 파일 동봉) |
 | 2026-10-22 | 단계 3: 검역관리지역 API(`/QuarantineRegion/NationDisease`) 연동, 176개국 지도 표시, 작은 섬나라 점 표시, `--raw` 재처리 |
 | 2026-10-22 | 단계 2: 연령별 알아보기 (연령대별 상위 감염병, 감염병별 연령·성별 분포, 유행 시기), 통계 파일 하위 폴더 탐색 |
+| 2026-10-22 | 최종 실측: 질문당 평균 18.48s → 4.57s(75% 단축, background+문서 미리 색인), 첫 글자 warm 1.1s, LLM 5회 → 1회. 앱 시작 때 임베딩 예열(첫 근거 검색 2.4s 제거), 측정 스크립트가 배경 수집을 기다린 뒤 정리 |
 | 2026-10-22 | 실측 반영(GMS): 기존 35.9s → 병렬 24.4s, 수집 생략 warm 2.4s(첫 글자 1.4s). background의 첫 질문은 항목 문서만 바로 색인하고 답(LLM 1회), 측정 스크립트가 사용 한도 초과(429)에도 결과 저장·`--quick`, 화면에 한도 초과 안내 |
 | 2026-10-22 | 챗봇 속도·형식: 단계별 시간·호출 수 기록과 화면 표시, 배경 수집·병렬 수집·스트리밍·같은 질문 저장·요약 LLM 생략, 측정 스크립트(`scripts/bench_chat.py`, 모의 측정 평균 5.60s → 3.33s), 답변을 카테고리 카드로. UI: 로고 → 홈, 목차 상시 표시, 상세보기 안에서 챗봇(큰 검색창), 질문하기 페이지 감염병 이름 크게·글자 줄임 |
 | 2026-10-22 | 페이지 분리: 홈(인트로 애니메이션 → 제목·안내·검색창·지구본, 나라 팝업과 '상세보기'), 감염병 상세보기(설명·KPI·남녀 막대·나이별 칸·인구 피라미드·유행 시기·지정 국가·챗봇 검색창, 애니메이션), 감염병 질문하기(대화창 + 대화 요약, 질문 속 감염병 자동 인식, 대화 하나로 이어짐), 로고 호버 목차 바 |
