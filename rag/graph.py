@@ -12,7 +12,8 @@ generate
 
 속도 설정 (config/rag_settings.json, 없으면 괄호 안 기본값)
   collect_policy   (background) always: 매번 검색어 추출·수집 / when_needed: 이미 모은 문서가 있으면 건너뜀 /
-                   background: 이미 모은 문서로 바로 답하고 수집은 뒤에서 (다음 질문부터 반영)
+                   background: 이미 모은 문서로 바로 답하고 수집은 뒤에서 (다음 질문부터 반영).
+                   처음 묻는 감염병이면 LLM이 필요 없는 항목 자체 문서만 바로 색인하고 답한다
   min_docs_for_fast (1)  이 감염병에 색인된 문서가 이만큼 있으면 '이미 모은 문서가 있다'고 본다
   parallel_collect (true) 항목 문서·검색어별 수집을 동시에
   aux_model        ("")  검색어 추출·후보 선별에 쓸 가벼운 모델 (비우면 chat_model)
@@ -178,8 +179,17 @@ def make_retrieve(svc: RagServices):
 
         policy = svc.opt("collect_policy", "background")
         have_docs = svc.store.docs_count(did) >= int(svc.opt("min_docs_for_fast", 1))
-        fast = policy in ("when_needed", "background") and have_docs and svc.collector is not None
         queries, collect_log, warnings, pool = [], [], [], None
+        if policy == "background" and not have_docs and svc.collector is not None:
+            # 처음 묻는 감염병: LLM이 필요 없는 항목 자체 문서만 바로 색인하고 답한다.
+            # 검색어 추출·선별(LLM 여러 번)이 드는 추가 수집은 답한 뒤 배경에서 (실측: 수집이 시간 대부분)
+            with meter.stage("collect"):
+                try:
+                    collect_log = _collect(svc, disease, question, [], meter)
+                except Exception:  # noqa: BLE001
+                    log.exception("항목 문서 수집 실패")
+            have_docs = svc.store.docs_count(did) >= int(svc.opt("min_docs_for_fast", 1))
+        fast = policy in ("when_needed", "background") and have_docs and svc.collector is not None
         if fast:
             meter.note(f"수집 생략 ({'배경 수집' if policy == 'background' else '이미 모은 문서 사용'})")
             _emit({"stage": "collect", "message": "이미 모은 문서로 바로 답합니다"})

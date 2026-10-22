@@ -54,27 +54,56 @@ GMS·위키백과에 접속할 수 없는 환경이라, 가짜 LLM·위키·임�
   오른쪽 요약의 LLM 호출이었다 → `summary_llm: false`로 해결.
 - 따라서 **Streamlit을 다른 수단(FastAPI+JS 등)으로 바꿔도 줄어드는 시간은 0.1초 미만**이다. 시간은 거의 전부 LLM·위키 호출에서 나온다.
 
-### 3-2. 실제 측정 (각자 컴퓨터에서)
+### 3-2. 실제 측정 (2026-10-22, SSAFY GMS·위키백과, gpt-4.1-mini)
+
+`python -m scripts.bench_chat` 결과. when_needed 세 번째 감염병에서 **GMS 사용 한도 초과(429 `organization_spend_limit_exceeded`)**로
+중단되어 background·cache·prefetch는 측정하지 못했다.
+
+| 설정 | cold 평균 | cold 첫 글자 | warm 평균 | warm 첫 글자 | 평균 | LLM 호출 cold/warm | 기존 대비 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| baseline | 38.73s | 38.73s | 33.06s | 33.06s | 35.90s | 5 / 4.7 | - |
+| parallel | 27.14s | 27.14s | 21.65s | 21.65s | 24.39s | 5 / 4.7 | 32% 단축 |
+| stream | 26.44s | 25.04s | 29.59s* | 28.27s | 28.01s | 5 / 4.7 | 22% 단축 |
+| when_needed (2종) | 38.78s | 31.22s | **2.36s** | **1.44s** | 20.57s | 5 / **1** | 43% 단축 (warm 93% 단축) |
+
+\* 뎅기열 warm 한 건이 44.9초로 튐 (GMS 응답 시간 변동). 감염병별 원자료는 측정 출력 그대로 보관.
+
+읽는 법
+- **수집을 건너뛴 warm 질문은 2.4초**(LLM 1회, 첫 글자 1.4초)인데, 수집하는 질문은 20~50초다.
+  답변 생성 자체는 2초 안팎이고, 나머지는 **질문 도중의 수집**(보조 LLM 4회 + 위키 검색·본문 + 임베딩)이다.
+- 병렬화로 수집 시간이 약 30% 줄었지만, 수집을 질문 경로에서 **빼는 것**이 가장 효과가 크다.
+- 스트리밍은 첫 글자를 앞당기지만, 수집이 길면 첫 글자도 수집이 끝나야 나와서 효과가 작다. 수집을 뺀 뒤에야 1초대가 된다.
+
+이 결과로 `background`의 cold(처음 묻는 감염병) 처리를 바꿨다: 검색어 추출·선별(LLM)이 필요한 수집은 답한 뒤 배경에서 하고,
+**LLM이 필요 없는 항목 자체 위키 문서 1건만 바로 색인**해서 답한다(답변 LLM 1회). 이 경로의 실제 시간은 한도가 열린 뒤
+`python -m scripts.bench_chat --quick`(baseline·background·prefetch만, 사용량 절약)으로 측정한다.
+
+### 3-3. 측정 방법
 
 ```bash
-python -m scripts.bench_chat                                         # 설정 7가지 비교 (약 3~5분)
+python -m scripts.bench_chat --quick                                 # baseline·background·prefetch만 (권장, 사용량 절약)
+python -m scripts.bench_chat                                         # 설정 7가지 모두
 python -m scripts.bench_chat --models gpt-4.1-mini,gpt-4.1-nano,gpt-4o-mini   # 답변 모델 비교 (background 설정)
 python -m scripts.bench_chat --configs baseline,background --aux-model gpt-4.1-nano   # 보조 모델
 ```
 
-결과는 `reports/bench_chat.md`(표)와 `reports/bench_chat.json`(질문별 상세)에 저장된다.
-측정은 지금 색인을 임시 폴더에 복사해서 하므로 실제 `data/chroma`·캐시는 바뀌지 않는다.
+결과는 `reports/bench_chat.md`(표 + 단계별 평균)와 `reports/bench_chat.json`(질문별 상세, 질문마다 저장)에 남는다.
+사용 한도 초과(429)로 멈추면 그때까지의 결과로 보고서를 만든다. 측정은 지금 색인을 임시 폴더에 복사해서 하므로
+실제 `data/chroma`·캐시는 바뀌지 않는다. **측정 1회(7가지 설정)에 LLM 호출이 약 100회** 들어가므로 GMS 한도에 주의.
 
-## 4. 선택한 기본값과 이유
+## 4. 선택한 기본값과 이유 (실측 반영)
 
 | 설정 | 값 | 이유 |
 | --- | --- | --- |
-| `collect_policy` | `background` | warm 질문을 LLM 1회로. when_needed와 속도는 같고, 새 질문에 맞는 문서가 뒤에서 계속 쌓임 |
-| `parallel_collect` | `true` | cold 수집 시간 단축, 결과는 순차와 같음(테스트로 확인) |
-| `stream_answer` | `true` | 첫 글자 대기 시간이 가장 크게 줄어드는 방법 |
-| `answer_cache` | `true` | 같은 질문 즉시. 프롬프트·모델이 바뀌면 자동으로 새로 만듦 |
-| `summary_llm` | `false` | 요약을 '핵심 답변'으로 만들어 질문당 LLM 1회 절약 |
-| `aux_model` | `""` | 실제 측정 전이라 바꾸지 않음. `--aux-model`로 비교 후 결정 |
-| 문서 미리 색인 | 권장 | 한 번 실행(수 분)으로 모든 첫 질문이 warm이 됨 |
+| `collect_policy` | `background` | 실측에서 수집을 건너뛴 질문 2.4초 vs 수집하는 질문 20~50초. 처음 묻는 감염병도 항목 문서 1건만 바로 색인하고 답함 |
+| `parallel_collect` | `true` | 배경·첫 수집 시간 32% 단축(실측), 결과는 순차와 같음(테스트) |
+| `stream_answer` | `true` | 수집을 뺀 질문에서 첫 글자 1.4초(실측) |
+| `answer_cache` | `true` | 같은 질문 즉시, LLM 호출 0 → 한도 절약에도 도움 |
+| `summary_llm` | `false` | 질문당 LLM 1회 절약 |
+| `aux_model` | `""` | 한도 초과로 비교 못 함. 한도가 열리면 `--aux-model`로 비교 후 결정 |
+| 문서 미리 색인 | 권장 | `build_index --prefetch-docs` 한 번이면 모든 첫 질문이 2초대 경로로 |
 
-화면에는 답마다 `⏱ 3.2초 · 첫 글자 1.1초 · LLM 1회 (근거 검색 0.3 · 답변 2.9)`처럼 실제 걸린 시간이 표시된다.
+참고: background는 수집을 **뒤로 미룰 뿐** 수집 LLM 호출 수는 같다. GMS 한도가 빠듯하면 `max_queries`를 3 → 1~2로 줄이면
+배경 수집의 LLM 호출이 함께 줄어든다.
+
+화면에는 답마다 `⏱ 2.4초 · 첫 글자 1.4초 · LLM 1회 (근거 검색 0.3 · 답변 2.0)`처럼 실제 걸린 시간이 표시된다.

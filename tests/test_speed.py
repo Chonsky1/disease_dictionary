@@ -74,6 +74,19 @@ class SpeedTest(unittest.TestCase):
         self.assertGreaterEqual(svc.store.docs_count(self.did), before)
         self.assertEqual(svc.background, set())
 
+    def test_background_cold_uses_item_doc_only(self):
+        """처음 묻는 감염병: 항목 자체 문서만 바로 색인(LLM 없음) → 답변 LLM 1회, 추가 수집은 배경."""
+        svc = self.svc(collect_policy="background")
+        first = self.ask(svc)
+        self.assertEqual(first["timings"]["llm_calls"], 1)
+        self.assertEqual(first["timings"]["calls"]["embed.index"], 1)            # 항목 문서 '홍역'
+        self.assertIn("홍역", [e["title"] for e in first["cited"]] + [e["title"] for e in first["evidence"]])
+        import threading
+        for t in threading.enumerate():
+            if t.name.startswith("collect-"):
+                t.join(10)
+        self.assertGreater(len(svc.store.list_docs(self.did)), 1)                 # 배경에서 검색어 문서까지
+
     def test_parallel_same_result_as_sequential(self):
         a = self.ask(self.svc("par", collect_policy="always", parallel_collect=True))
         b = self.ask(self.svc("seq", collect_policy="always", parallel_collect=False))
@@ -122,6 +135,15 @@ class MeterTest(unittest.TestCase):
         self.assertEqual((s["calls"]["llm.queries"], s["calls"]["wiki.search"], s["llm_calls"]), (1, 2, 1))
         self.assertIn("LLM 1회", describe(s))
         self.assertIn("검색어", describe(s))
+
+
+class QuotaTest(unittest.TestCase):
+    def test_quota_detection(self):
+        from scripts.bench_chat import is_quota
+        from ui.chat_core import is_quota_error
+        err = RuntimeError("Error code: 429 - {'code': 'organization_spend_limit_exceeded', 'type': 'insufficient_quota'}")
+        self.assertTrue(is_quota(err) and is_quota_error(err))
+        self.assertFalse(is_quota_error(ValueError("다른 오류")))
 
 
 class AnswerFormatTest(unittest.TestCase):

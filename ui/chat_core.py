@@ -20,6 +20,12 @@ ICONS = {"핵심 답변": "💡", "초기 증상": "🌡️", "전체 증상": "
 _CITE = re.compile(r"\[근거\s*[\d,\s]+\]")
 
 
+def is_quota_error(exc: BaseException) -> bool:
+    """GMS·OpenAI 사용 한도 초과 (429 insufficient_quota / spend limit)."""
+    text = f"{type(exc).__name__} {exc}"
+    return any(k in text for k in ("insufficient_quota", "spend_limit", "RateLimitError", "Error code: 429"))
+
+
 def split_sections(text: str) -> tuple[str, list[tuple[str, str]]]:
     """'### 제목' 기준으로 (머리말, [(제목, 본문)])."""
     parts = re.split(r"^\s*#{2,4}\s*(.+?)\s*$", text.strip(), flags=re.M)
@@ -118,8 +124,12 @@ def ask(question: str, did: str, rt, history: list[dict], box, show_disease: boo
             except IndexMissingError:
                 status.update(label="색인 없음", state="error")
                 st.warning("이 감염병의 색인이 없습니다. `python -m scripts.build_index`를 실행하세요.")
-            except Exception:  # noqa: BLE001 - 추적 정보는 로그에만 (NF2004)
+            except Exception as exc:  # noqa: BLE001 - 추적 정보는 로그에만 (NF2004)
                 log.exception("답변 생성 실패")
                 status.update(label="실패", state="error")
-                st.error("답변을 만드는 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.")
+                if is_quota_error(exc):
+                    st.error("AI 사용 한도를 넘었습니다 (GMS 429). 한도가 다시 열린 뒤 질문해 주세요. "
+                             "같은 질문은 저장된 답이 있으면 바로 보여 드립니다.")
+                else:
+                    st.error("답변을 만드는 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.")
     return None

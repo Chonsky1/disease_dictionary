@@ -4,6 +4,8 @@
   python -m scripts.bench_chat                                   # 기본 설정 6가지 비교
   python -m scripts.bench_chat --models gpt-4.1-mini,gpt-4.1-nano,gpt-4o-mini   # 답변 모델 비교
   python -m scripts.bench_chat --configs baseline,background --rounds 2
+  python -m scripts.bench_chat --quick                           # baseline·background·prefetch만 (사용량 절약)
+사용 한도 초과(429) 등으로 멈추면 그때까지의 결과로 보고서를 만든다 (질문마다 bench_chat.json에 저장).
 네트워크 없이 흐름만 (가짜 LLM·위키에 지연을 흉내, 숫자는 모의값):
   python -m scripts.bench_chat --fake
 화면(Streamlit) 자체가 더하는 시간:
@@ -141,7 +143,16 @@ def ask(rt, q: str, did: str) -> dict:
     return t
 
 
-def bench_config(name: str, overrides: dict, args, lat: dict) -> list[dict]:
+class QuotaError(RuntimeError):
+    """GMS·OpenAI 사용 한도 초과 (429 insufficient_quota 등): 더 측정해도 실패하므로 멈추고 지금까지 저장."""
+
+
+def is_quota(exc: BaseException) -> bool:
+    text = f"{type(exc).__name__} {exc}"
+    return any(k in text for k in ("insufficient_quota", "spend_limit", "RateLimitError", "429"))
+
+
+def bench_config(name: str, overrides: dict, args, lat: dict, rows: list[dict], on_row=None) -> list[dict]:
     from data_prep.diseases import load_diseases
     base = paths.load_rag_settings()
     prefetch = overrides.get("_prefetch", False)
@@ -150,7 +161,6 @@ def bench_config(name: str, overrides: dict, args, lat: dict) -> list[dict]:
         settings["chat_model"] = args.model
     if args.aux_model is not None:
         settings["aux_model"] = args.aux_model
-    rows = []
     for r in range(args.rounds):
         root = Path(tempfile.mkdtemp(prefix="bench_"))
         try:
@@ -168,13 +178,22 @@ def bench_config(name: str, overrides: dict, args, lat: dict) -> list[dict]:
                 for did in dids:
                     _collect(rt.services, rt.by_id[did], "", [])
             for (n, q_cold, q_warm), did in zip(QUESTIONS, dids):
-                cold = ask(rt, q_cold, did)
-                _wait_background(rt)      # 배경 수집이 끝난 뒤 warm 측정 (실사용에서도 보통 질문 사이에 끝남)
-                warm = ask(rt, q_warm, did)
-                row = {"config": name, "round": r + 1, "disease": n, "cold": cold, "warm": warm}
-                if overrides.get("answer_cache"):
-                    row["repeat"] = ask(rt, q_warm, did)
+                try:
+                    cold = ask(rt, q_cold, did)
+                    _wait_background(rt)      # 배경 수집이 끝난 뒤 warm 측정 (실사용에서도 보통 질문 사이에 끝남)
+                    warm = ask(rt, q_warm, did)
+                    row = {"config": name, "round": r + 1, "disease": n, "cold": cold, "warm": warm}
+                    if overrides.get("answer_cache"):
+                        row["repeat"] = ask(rt, q_warm, did)
+                except Exception as exc:  # noqa: BLE001
+                    if is_quota(exc):
+                        raise QuotaError(str(exc)[:300]) from exc
+                    print(f"  {name:12s} {n:8s} 오류: {type(exc).__name__}: {str(exc)[:160]}")
+                    rows.append({"config": name, "round": r + 1, "disease": n, "error": f"{type(exc).__name__}: {exc}"[:500]})
+                    continue
                 rows.append(row)
+                if on_row:
+                    on_row()
                 print(f"  {name:12s} {n:8s} cold {cold['wall_s']:6.2f}s (첫 글자 {cold['first_token_s']:.2f}s, "
                       f"LLM {cold['llm_calls']}) · warm {warm['wall_s']:6.2f}s (첫 글자 {warm['first_token_s']:.2f}s, "
                       f"LLM {warm['llm_calls']})" + (f" · 반복 {row['repeat']['wall_s']:.2f}s" if 'repeat' in row else ""))
@@ -195,8 +214,8 @@ def _wait_background(rt, timeout: float = 120) -> None:
 
 def summarize(rows: list[dict]) -> list[dict]:
     out = []
-    for name in dict.fromkeys(r["config"] for r in rows):
-        rs = [r for r in rows if r["config"] == name]
+    for name in dict.fromkeys(r["config"] for r in rows if "error" not in r):
+        rs = [r for r in rows if r["config"] == name and "error" not in r]
 
         def avg(kind, key):
             return round(statistics.mean(r[kind][key] for r in rs), 2)
@@ -207,6 +226,13 @@ def summarize(rows: list[dict]) -> list[dict]:
                                                 for r in rs), 1)}
         if all("repeat" in r for r in rs):
             s["repeat_s"] = avg("repeat", "wall_s")
+        for kind in ("cold", "warm"):   # 단계별 평균 (어디서 시간이 드는지)
+            stages = {}
+            for r in rs:
+                for k, v in r[kind].get("stages", {}).items():
+                    stages.setdefault(k, []).append(v)
+            s[f"{kind}_stages"] = {k: round(statistics.mean(v), 2) for k, v in stages.items()}
+        s["n"] = len(rs)
         s["avg_s"] = round((s["cold_s"] + s["warm_s"]) / 2, 2)
         out.append(s)
     return out
@@ -249,6 +275,7 @@ def main(argv=None) -> int:
     ap.add_argument("--model", default="", help=argparse.SUPPRESS)
     ap.add_argument("--aux-model", default=None, help="검색어 추출·선별 모델 (예: gpt-4.1-nano)")
     ap.add_argument("--rounds", type=int, default=1)
+    ap.add_argument("--quick", action="store_true", help="baseline·background·prefetch만 (GMS 사용량 절약)")
     ap.add_argument("--fake", action="store_true", help="네트워크 없이 모의 지연으로")
     ap.add_argument("--ui", action="store_true", help="Streamlit 화면 자체 시간도 측정 (--fake와 함께)")
     args = ap.parse_args(argv)
@@ -258,21 +285,35 @@ def main(argv=None) -> int:
     paths.ensure_dirs()
     orig = (paths.WIKI_PAGES, paths.QUERY_CACHE, paths.CACHE)
     rows: list[dict] = []
+    stopped = ""
+
+    def save_partial() -> None:   # 질문마다 저장 → 중간에 멈춰도 결과가 남음
+        (paths.REPORTS / "bench_chat.json").write_text(
+            json.dumps({"partial": True, "rows": rows}, ensure_ascii=False, indent=1), encoding="utf-8")
+    configs = ["baseline", "background", "prefetch"] if args.quick else \
+        [c.strip() for c in args.configs.split(",") if c.strip()]
     try:
         if args.models:
             for m in [x.strip() for x in args.models.split(",") if x.strip()]:
                 args.model = m
                 print(f"[model] {m}")
-                rows += [dict(r, config=f"model:{m}") for r in bench_config(f"model:{m}", CONFIGS["background"][1],
-                                                                           args, lat)]
+                bench_config(f"model:{m}", CONFIGS["background"][1], args, lat, rows, save_partial)
         else:
-            for name in [c.strip() for c in args.configs.split(",") if c.strip()]:
+            for name in configs:
                 print(f"[config] {name}: {CONFIGS[name][0]}")
-                rows += bench_config(name, CONFIGS[name][1], args, lat)
+                bench_config(name, CONFIGS[name][1], args, lat, rows, save_partial)
+    except QuotaError as exc:
+        stopped = f"사용 한도 초과로 중단 (GMS/OpenAI 429): {exc}"
+        print(f"\n[!] {stopped}\n    지금까지 측정한 결과로 보고서를 만듭니다.")
+    except KeyboardInterrupt:
+        stopped = "사용자가 중단"
     finally:
         paths.WIKI_PAGES, paths.QUERY_CACHE, paths.CACHE = orig
     summary = summarize(rows)
     ui = ui_overhead(lat) if args.ui else None
+    if not summary:
+        print("[x] 측정된 결과가 없습니다.")
+        return 1
 
     mode = "모의 지연 (--fake, 네트워크 없음)" if args.fake else "실제 호출 (GMS·위키백과)"
     s0 = next((s for s in summary if s["config"] == "baseline"), summary[0])
@@ -280,18 +321,31 @@ def main(argv=None) -> int:
     lines = [f"# 챗봇 답변 시간 측정 ({datetime.now():%Y-%m-%d %H:%M}, {mode})", "",
              f"- 질문: 감염병 {len(QUESTIONS)}종 × (cold 1 + warm 1), 반복 {args.rounds}회 평균",
              f"- 답변 모델: {args.model or paths.load_rag_settings()['chat_model']}"
-             + (f", 보조 모델: {args.aux_model}" if args.aux_model else ""), "",
-             "| 설정 | cold 총 | cold 첫 글자 | warm 총 | warm 첫 글자 | 평균 | LLM 호출 cold/warm | 위키 호출 cold | 기존 대비 |",
-             "| --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
+             + (f", 보조 모델: {args.aux_model}" if args.aux_model else "")]
+    if stopped:
+        lines.append(f"- **{stopped}** · 측정 못 한 설정은 표에 없음")
+    lines += ["", "| 설정 | cold 총 | cold 첫 글자 | warm 총 | warm 첫 글자 | 평균 | LLM 호출 cold/warm | 위키 호출 cold | 기존 대비 |",
+              "| --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
     for s in summary:
         cut = (1 - s["avg_s"] / s0["avg_s"]) * 100 if s0["avg_s"] else 0
         vs = "-" if s is s0 else (f"{cut:.0f}% 단축" if cut >= 0 else f"{-cut:.0f}% 느림")
-        lines.append(f"| {s['config']} | {s['cold_s']:.2f}s | {s['cold_first_s']:.2f}s | {s['warm_s']:.2f}s | "
+        label = s["config"] if s["n"] == len(QUESTIONS) * args.rounds else f"{s['config']} ({s['n']}건)"
+        lines.append(f"| {label} | "
+                     f"{s['cold_s']:.2f}s | {s['cold_first_s']:.2f}s | {s['warm_s']:.2f}s | "
                      f"{s['warm_first_s']:.2f}s | **{s['avg_s']:.2f}s** | {s['cold_llm']:.0f} / {s['warm_llm']:.0f} | "
                      f"{s['cold_wiki']:.0f} | {vs} |"
                      + (f" 같은 질문 반복 {s['repeat_s']:.2f}s" if "repeat_s" in s else ""))
     lines += ["", f"**가장 빠른 설정: {best['config']}** (평균 {best['avg_s']:.2f}s, 기존 {s0['avg_s']:.2f}s 대비 "
-              f"{(1 - best['avg_s'] / s0['avg_s']) * 100 if s0['avg_s'] else 0:.0f}% 단축)"]
+              f"{(1 - best['avg_s'] / s0['avg_s']) * 100 if s0['avg_s'] else 0:.0f}% 단축)", "",
+              "단계별 평균 (초):", "", "| 설정 | cold: 검색어 · 수집 · 근거 검색 · 답변 | warm: 검색어 · 수집 · 근거 검색 · 답변 |",
+              "| --- | --- | --- |"]
+    order = ("queries", "collect", "search", "generate")
+    for s in summary:
+        lines.append(f"| {s['config']} | " + " · ".join(f"{s['cold_stages'].get(k, 0):.1f}" for k in order)
+                     + " | " + " · ".join(f"{s['warm_stages'].get(k, 0):.1f}" for k in order) + " |")
+    errors = [r for r in rows if "error" in r]
+    if errors:
+        lines += ["", "오류:", *[f"- {r['config']} {r['disease']}: {r['error'][:200]}" for r in errors]]
     if ui:
         lines += ["", f"- Streamlit 화면이 더하는 시간: 질문당 {ui['overhead_s']:.2f}s "
                       f"(화면 전체 {ui['page_s']:.2f}s 중 RAG {ui['graph_s']:.2f}s)"]
@@ -299,8 +353,8 @@ def main(argv=None) -> int:
     report = paths.REPORTS / "bench_chat.md"
     report.write_text("\n".join(lines) + "\n", encoding="utf-8")
     (paths.REPORTS / "bench_chat.json").write_text(
-        json.dumps({"mode": mode, "summary": summary, "ui": ui, "rows": rows}, ensure_ascii=False, indent=1),
-        encoding="utf-8")
+        json.dumps({"mode": mode, "stopped": stopped, "summary": summary, "ui": ui, "rows": rows},
+                   ensure_ascii=False, indent=1), encoding="utf-8")
     print("\n" + "\n".join(lines))
     return 0
 
