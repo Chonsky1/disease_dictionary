@@ -248,21 +248,34 @@ class MapEventTest(unittest.TestCase):
 
     def test_map_figure(self):
         import tempfile
-        from service.countries import load_countries, load_watch
-        from ui.map_view import SELECTED, build_world_map
+        from service.countries import country_names, load_watch
+        from ui.map_view import HOME_VIEW, SELECTED, build_world_map, view_center
         tmp = Path(tempfile.mkdtemp())
         write_sample_watch(tmp / "w.json")
-        cs, watch = load_countries(paths.CONFIG / "countries.json"), load_watch(tmp / "w.json")
-        fig = build_world_map(cs, watch, "VNM")
+        names, watch = country_names(paths.CONFIG / "country_names_ko.json"), load_watch(tmp / "w.json")
+        fig = build_world_map(watch, "VNM", names)
         shaded = next(t for t in fig.data if t.name == "검역관리지역")
         self.assertEqual(sorted(shaded.locations), ["NGA", "SGP", "VNM"])        # 지정 중 + 지도 코드 있는 나라
         self.assertEqual(dict(zip(shaded.locations, shaded.z))["VNM"], 2)          # 감염병 수로 색칠
+        plain = next(t for t in fig.data if t.name == "지정 없음")                 # 지정 없는 나라도 누를 수 있음
+        self.assertIn("JPN", plain.locations)
+        self.assertNotIn("VNM", plain.locations)
+        self.assertNotIn("주요 여행지", [t.name for t in fig.data])                # 여행지 표시 없음
         sel = next(t for t in fig.data if t.name == "선택")
         self.assertEqual((list(sel.locations), sel.colorscale[0][1]), (["VNM"], SELECTED))
-        self.assertEqual(fig.layout.clickmode, "event+select")
-        empty = build_world_map(cs, load_watch(tmp / "none.json"), None)          # 수집 전에도 그려짐
-        self.assertEqual([t.name for t in empty.data], ["주요 여행지", "주요 여행지 점"])
+        # 지구본: orthographic, 끌어서 회전, 고른 나라 쪽으로 돌아감
+        self.assertEqual(fig.layout.geo.projection.type, "orthographic")
+        self.assertEqual((fig.layout.dragmode, fig.layout.clickmode, fig.layout.uirevision), ("pan", "event+select", "VNM"))
+        self.assertAlmostEqual(fig.layout.geo.projection.rotation.lon, 106.29, places=1)
+        self.assertEqual(view_center(None), HOME_VIEW)
+        self.assertEqual(view_center("RUS")[1], 60.0)                              # 너무 북쪽은 60도로 제한
+        empty = build_world_map(load_watch(tmp / "none.json"), None, names)        # 수집 전에도 그려짐
+        self.assertEqual([t.name for t in empty.data], ["지정 없음"])
 
+    def test_country_names(self):
+        from service.countries import country_names
+        names = country_names(paths.CONFIG / "country_names_ko.json")
+        self.assertEqual((names["AFG"], names["RUS"], names["KOR"]), ("아프가니스탄", "러시아", "대한민국"))
 
 if __name__ == "__main__":
     unittest.main()

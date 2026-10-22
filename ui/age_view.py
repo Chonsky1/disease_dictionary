@@ -1,22 +1,26 @@
-"""연령별 알아보기 차트 (plotly). 색: 남·여 2색(색각 이상 검증 통과), 유행 시기는 최근 해만 진하게."""
+"""연령별 알아보기 차트 (plotly, 다크 테마). 색: 남·여 2색(색각 이상 검증 통과), 유행 시기는 최근 해만 진하게.
+막대가 자라는·선이 그려지는 애니메이션은 ui/styles.py의 CSS가 맡는다 (차트를 새로 그릴 때마다 재생)."""
 from __future__ import annotations
 
 import plotly.graph_objects as go
 
 from service.age import AgeDisease, Trend, TrendItem
 
-TEAL, NAVY, ACCENT = "#1b7a6f", "#1d3557", "#e4572e"
-MALE, FEMALE = "#2f6f9f", "#d9775a"       # validate_palette.js: CVD ΔE 16, 일반 ΔE 27 (PASS)
-CONTEXT = "#c6d0d9"                         # 지난 해·절기 (배경 선)
+TEAL, ACCENT = "#1f9e8f", "#e5603f"         # validate_palette.js --mode dark (바탕 #16202a): PASS
+MALE, FEMALE = "#4a8cc7", "#d06a4e"         # validate_palette.js --mode dark: CVD ΔE 17.6, 일반 ΔE 23.9 (PASS)
+LATEST = "#45dcc8"                          # 가장 최근 해·절기 (밝게)
+CONTEXT = "#33414f"                         # 지난 해·절기 (배경 선)
 PREV = "#7f93a8"                            # 바로 전 해·절기
-INK, MUTED, GRID = "#24323f", "#6b7b8b", "#e6ebef"
+INK, MUTED, GRID = "#e6edf3", "#93a3b3", "#24313d"
+SURFACE = "#16202a"
 FONT = {"size": 13, "color": INK}
 
 
 def _layout(fig: go.Figure, height: int, **kw) -> go.Figure:
     fig.update_layout(height=height, margin={"l": 8, "r": 12, "t": 8, "b": 8}, font=FONT,
                       paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", bargap=0.28,
-                      hoverlabel={"bgcolor": "#ffffff", "font_size": 13}, dragmode=False, **kw)
+                      hoverlabel={"bgcolor": SURFACE, "bordercolor": "#2f3e4c", "font": {"size": 13, "color": INK}},
+                      dragmode=False, **kw)
     fig.update_xaxes(gridcolor=GRID, zeroline=False, tickfont={"color": MUTED})
     fig.update_yaxes(gridcolor=GRID, zeroline=False, tickfont={"color": MUTED})
     return fig
@@ -45,7 +49,7 @@ def age_sex_bar(d: AgeDisease, ages: list[str], highlight: str | None = None) ->
     for sex, color in (("남", MALE), ("여", FEMALE)):
         fig.add_trace(go.Bar(
             x=ages, y=[d.count(a, sex) for a in ages], name=sex, marker={"color": color, "cornerradius": 3},
-            marker_line={"color": "#ffffff", "width": 1},
+            marker_line={"color": SURFACE, "width": 2},   # 쌓은 칸 사이 2px 틈
             hovertemplate=f"%{{x}} · {sex} %{{y:,}}건<extra></extra>"))
     _layout(fig, 330, barmode="stack",
             legend={"orientation": "h", "y": 1.08, "x": 0, "font": {"color": INK}, "traceorder": "normal"})
@@ -76,7 +80,7 @@ def trend_lines(trend: Trend, item: TrendItem, show: list[str] | None = None) ->
     unit_short = "건" if "건수" in trend.unit else ("명" if "환자 수" in trend.unit and "1,000" not in trend.unit else "")
     for i, k in enumerate(keys):
         latest, prev = i == len(keys) - 1, i == len(keys) - 2
-        color, width = (TEAL, 3) if latest else ((PREV, 2) if prev else (CONTEXT, 1.5))
+        color, width = (LATEST, 3) if latest else ((PREV, 2) if prev else (CONTEXT, 1.5))
         label = f"{k}절기" if trend.kind == "season" else f"{k}년"
         fig.add_trace(go.Scatter(
             x=trend.x, y=item.series[k], mode="lines", name=label, connectgaps=True,   # 53주가 없는 해의 빈칸 잇기

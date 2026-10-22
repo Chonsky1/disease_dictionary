@@ -48,8 +48,10 @@ streamlit run ui/app.py                        # 반드시 kdca-rag 폴더에서
 | RAG | `rag/prompts.py` | 프롬프트 3종 + 조건 탐색 1종 |
 | | `rag/graph.py` | LangGraph `retrieve` → `generate` (F2003, F2006~F2008) |
 | 서비스 | `service/explore.py` | 조건 기반 탐색 (F2011) |
-| UI | `ui/app.py` | 한 페이지 레이아웃: 상단 내비게이션 → 감염병 질문하기(F2009, F2011, F2012) → 나라별 지도 → 연령별 |
-| | `ui/map_view.py`, `ui/styles.py` | 클릭 가능한 세계 지도(plotly), 화면 스타일 |
+| UI | `ui/app.py` | 한 페이지 레이아웃(다크 테마): 상단 내비게이션 → 나라별 지구본 → 감염병 질문하기(F2009, F2011, F2012) → 연령별 |
+| | `ui/map_view.py` | 끌어서 돌리는 지구본(plotly orthographic), 고른 나라 쪽으로 회전, 지정 없는 나라도 클릭 가능 |
+| | `ui/styles.py` | 다크 테마, 나라 패널이 천천히 떠오르는 애니메이션, 막대 자라기·선 드러나기 애니메이션 |
+| 설정 | `config/country_centroids.json` | 나라 중심 좌표 (지구본 회전용, 지도 경계 파일에서 계산) |
 | | `ui/static/topojson/` | 지도 경계 파일 (CDN이 막힌 망에서도 지도가 보이도록 앱과 함께 제공) |
 | 서비스 | `service/countries.py` | 지도용 나라 목록, `data/processed/country_watch.json` 읽기 |
 | 데이터 준비 | `data_prep/quarantine.py`, `scripts/fetch_quarantine.py` | 검역관리지역 API·CSV → 현재 지정만 → 나라·감염병 매핑 → country_watch.json ([분석](docs/QUARANTINE_API.md)) |
@@ -98,4 +100,5 @@ streamlit run ui/app.py                        # 반드시 kdca-rag 폴더에서
 | 2026-10-22 | 화면 개편: 상단 내비게이션, 한 페이지 3섹션, 클릭 가능한 세계 지도 (지도 경계 파일 동봉) |
 | 2026-10-22 | 단계 3: 검역관리지역 API(`/QuarantineRegion/NationDisease`) 연동, 176개국 지도 표시, 작은 섬나라 점 표시, `--raw` 재처리 |
 | 2026-10-22 | 단계 2: 연령별 알아보기 (연령대별 상위 감염병, 감염병별 연령·성별 분포, 유행 시기), 통계 파일 하위 폴더 탐색 |
+| 2026-10-22 | UI 개편: 다크 모드, 나라별 섹션을 맨 위로, 돌릴 수 있는 3D 지구본(고른 나라로 회전), 주요 여행지 표시 제거(`config/countries.json` 삭제), 나라 패널·감염병 줄이 천천히 나타나는 애니메이션, 연령별 막대·유행 시기 선 애니메이션 (움직임 줄이기 설정 시 끔) |
 

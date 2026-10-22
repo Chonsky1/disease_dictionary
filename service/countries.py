@@ -1,6 +1,6 @@
 """나라별 주의 감염병 (지도·패널 데이터 계층).
 
-- config/countries.json             : 지도에 점으로 찍는 주요 여행지 (작은 나라도 누를 수 있게)
+- config/country_names_ko.json      : 한글 국가명 → ISO-3 (지구본에서 누를 수 있는 나라와 대표 이름)
 - data/processed/country_watch.json : scripts/fetch_quarantine.py가 질병관리청 검역관리지역정보로 만든 파일
 
 country_watch.json 형식:
@@ -22,15 +22,6 @@ from pathlib import Path
 
 
 @dataclass
-class Country:
-    iso3: str
-    name_ko: str
-    lat: float
-    lon: float
-    home: bool = False
-
-
-@dataclass
 class CountryWatch:
     key: str
     name_ko: str
@@ -45,12 +36,6 @@ class WatchData:
     source: str = ""
     source_url: str = ""
     countries: dict[str, CountryWatch] = field(default_factory=dict)
-
-
-def load_countries(path: Path) -> list[Country]:
-    data = json.loads(Path(path).read_text(encoding="utf-8"))
-    return [Country(c["iso3"], c["name_ko"], float(c["lat"]), float(c["lon"]), bool(c.get("home", False)))
-            for c in data["countries"]]
 
 
 def load_watch(path: Path) -> WatchData:
@@ -83,3 +68,13 @@ def country_from_event(event, valid: set[str]) -> str | None:
         if isinstance(loc, str) and loc in valid:
             return loc
     return None
+
+
+def country_names(path: Path) -> dict[str, str]:
+    """국가명 변환표(한글 이름 → ISO-3)를 뒤집어 ISO-3 → 대표 한글 이름 (변환표에서 먼저 나온 이름)."""
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    out: dict[str, str] = {}
+    for name, iso in data.items():
+        if not name.startswith("_"):
+            out.setdefault(iso, name)
+    return out

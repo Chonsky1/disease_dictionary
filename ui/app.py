@@ -1,10 +1,10 @@
 """법정감염병 안내 도우미 - Streamlit 화면.
 
-레이아웃 (도안 기준, 한 페이지 + 상단 내비게이션):
-  [로고] [감염병 질문하기] [나라별 알아보기] [연령별 알아보기]   ← 누르면 해당 섹션으로 이동
+레이아웃 (한 페이지 + 상단 내비게이션, 다크 테마):
+  [로고] [나라별 알아보기] [감염병 질문하기] [연령별 알아보기]   ← 누르면 해당 섹션으로 이동
   제목 / 면책 안내
-  ① 감염병 질문하기: 질의응답 | 이런 감염병 찾기  (F2009, F2011, F2012)
-  ② 나라별 주의 감염병: 검역관리지역 지정 국가를 색칠한 세계 지도 + 나라 상세 패널
+  ① 나라별 주의 감염병: 돌릴 수 있는 지구본 + 나라 패널(천천히 나타남)
+  ② 감염병 질문하기: 질의응답 | 이런 감염병 찾기  (F2009, F2011, F2012)
   ③ 연령별 알아보기: 연령대별 많이 신고된 감염병 | 감염병별 연령 분포 | 유행 시기 (차트 + 정보 창)
 
 실행: streamlit run ui/app.py
@@ -25,11 +25,11 @@ from data_prep import settings as paths  # noqa: E402
 from rag.graph import IndexMissingError, run  # noqa: E402
 from rag.llm import missing_keys  # noqa: E402
 from service.age import fmt_value, load_age_stats, profile, top_for_age, trend_summary  # noqa: E402
-from service.countries import country_from_event, load_countries, load_watch  # noqa: E402
+from service.countries import country_from_event, country_names, load_watch  # noqa: E402
 from service.explore import find_diseases  # noqa: E402
 from service.runtime import DISCLAIMER, build_runtime, setup_logging  # noqa: E402
 from ui.age_view import age_sex_bar, sari_bar, top_bar, trend_lines  # noqa: E402
-from ui.map_view import HIGH, LOW, SELECTED, TARGET, build_world_map  # noqa: E402
+from ui.map_view import HIGH, LOW, NEUTRAL, SELECTED, build_world_map  # noqa: E402
 from ui.styles import CSS, NAV_HTML  # noqa: E402
 
 log = logging.getLogger("kdca_rag")
@@ -43,6 +43,7 @@ COUNTRY_WATCH = paths.PROCESSED / "country_watch.json"
 AGE_STATS = paths.PROCESSED / "age_stats.json"
 # 지도 경계 파일을 CDN 대신 앱과 함께 둔 파일로 받는다 (ui/static/topojson, 정적 파일 제공 필요)
 MAP_CONFIG = {"displayModeBar": False, "scrollZoom": False, "topojsonURL": "app/static/topojson/"}
+HOME_ISO = "KOR"
 
 
 def anchor(name: str) -> None:
@@ -75,8 +76,6 @@ if meta_count == 0:
     st.code("python -m scripts.build_index", language="bash")
     st.stop()
 
-countries = load_countries(paths.CONFIG / "countries.json")
-by_iso = {c.iso3: c for c in countries}
 watch = load_watch(COUNTRY_WATCH)
 
 ss = st.session_state
@@ -91,7 +90,7 @@ ss.setdefault("_map_pick", None)
 def select_disease(did: str) -> None:
     ss["disease"] = did
     ss["view"] = VIEW_CHAT
-    st.toast(f"'{rt.by_id[did].display_name}'을(를) 골랐어요. 위 '감염병 질문하기'에서 질문하세요.")
+    st.toast(f"'{rt.by_id[did].display_name}'을(를) 골랐어요. '감염병 질문하기'에서 질문하세요.")
 
 
 def on_country_select() -> None:
@@ -104,7 +103,85 @@ st.title("법정감염병 안내 도우미")
 st.caption(DISCLAIMER)
 
 
-# ---- ① 감염병 질문하기 ----------------------------------------------------------------
+# ---- ① 나라별 주의 감염병 (질병관리청 검역관리지역정보) - 맨 위 ----------------------------
+# 고를 수 있는 나라 = 국가명 변환표의 모든 나라 (지정 없는 나라도 눌러서 '지정 없음' 확인) + API 나라 이름
+choices: dict[str, str] = country_names(paths.CONFIG / "country_names_ko.json")
+choices.update({k: w.name_ko for k, w in watch.countries.items()})
+choice_keys = sorted(choices, key=lambda k: (k not in watch.countries, choices[k]))  # 지정 국가 먼저, 가나다순
+
+
+def country_panel(key: str | None) -> None:
+    if not key:
+        st.markdown("<div class='kd-country-name'>나라를 골라 주세요</div>", unsafe_allow_html=True)
+        st.markdown("<div class='kd-muted'>지구본을 끌어서 돌리고, 나라를 누르면 그 나라에서 주의해야 할 "
+                    "검역감염병이 나타납니다.</div>", unsafe_allow_html=True)
+        if watch.loaded:
+            busiest = sorted(watch.countries.values(), key=lambda w: (-len(w.diseases), w.name_ko))[:6]
+            st.markdown("<div class='kd-muted' style='margin-top:.8rem'>지정 감염병이 많은 나라</div>"
+                        + "".join(f"<span class='kd-chip'>{w.name_ko} {len(w.diseases)}</span>" for w in busiest),
+                        unsafe_allow_html=True)
+        return
+    st.markdown(f"<div class='kd-country-name'>{choices.get(key, key)}</div>", unsafe_allow_html=True)
+    if key == HOME_ISO:
+        st.markdown("국내 법정감염병 133종의 급수·신고 기준과 설명은 아래 **감염병 질문하기**에서 확인할 수 있어요.")
+        return
+    if not watch.loaded:
+        st.info("검역관리지역 정보를 아직 수집하지 않았습니다. 터미널에서 "
+                "`python -m scripts.fetch_quarantine`을 실행하세요.")
+        return
+    w = watch.countries.get(key)
+    if not w or not w.diseases:
+        st.success(f"{watch.as_of} 기준, 이 나라는 검역관리지역으로 지정된 검역감염병이 없습니다.")
+    else:
+        st.markdown(f"<div class='kd-alert'>주의가 필요해요 · 검역감염병 {len(w.diseases)}종</div>",
+                    unsafe_allow_html=True)
+        for i, item in enumerate(w.diseases):
+            with st.container(key=f"cwrow{min(i, 11)}_{i}_{key}"):   # 줄마다 조금씩 늦게 나타나게 (styles.py)
+                row = st.columns([3, 2], vertical_alignment="center")
+                row[0].markdown(f"**{item['name']}**" + (f"  \n<span class='kd-muted'>{item['note']}</span>"
+                                                         if item.get("note") else ""), unsafe_allow_html=True)
+                did = item.get("disease_id")
+                if did in rt.by_id:
+                    row[1].button("질문하기", key=f"ask_{key}_{i}", on_click=select_disease, args=(did,),
+                                  width="stretch")
+    src = f"[{watch.source}]({watch.source_url})" if watch.source_url else watch.source
+    st.caption(f"기준일 {watch.as_of} · 출처 {src}  \n검역관리지역: 검역법에 따라 WHO·현지 공관 등의 감염병 발생 "
+               "정보를 기준으로 지정한 지역. 귀국 후 의심 증상이 있으면 1339에 문의하세요.")
+
+
+anchor("country")
+sub = (f"질병관리청 검역관리지역 {watch.as_of} 기준 · 지정 국가 {len(watch.countries)}개국. "
+       if watch.loaded else "검역관리지역 정보 수집 전입니다 (python -m scripts.fetch_quarantine). ")
+st.markdown("<div class='kd-section-title'>나라별 주의 감염병 알아보기</div>"
+            f"<div class='kd-sub'>{sub}출국 전 확인용 일반 정보이며, 최신 상황은 질병관리청 안내를 확인하세요.</div>",
+            unsafe_allow_html=True)
+
+picked = country_from_event(ss.get("world_map"), set(choices))
+if picked and picked != ss["_map_pick"]:  # 지도를 새로 눌렀을 때만 반영 (목록 선택을 덮어쓰지 않게)
+    ss["country"] = ss["_map_pick"] = picked
+
+left, right = st.columns([2.3, 1.2], gap="medium")
+with left:
+    with st.container(key="map_card"):
+        st.plotly_chart(build_world_map(watch, ss["country"], choices), key="world_map", on_select="rerun",
+                        selection_mode="points", config=MAP_CONFIG)
+    st.markdown("<div class='kd-legend'>"
+                f"<span><i class='kd-dot' style='background:linear-gradient(90deg,{LOW},{HIGH})'></i>검역관리지역 (밝을수록 감염병 많음)</span>"
+                f"<span><i class='kd-dot' style='background:{NEUTRAL}'></i>지정 없음</span>"
+                f"<span><i class='kd-dot' style='background:{SELECTED}'></i>선택한 나라</span>"
+                "<span>· 끌어서 돌리기</span></div>",
+                unsafe_allow_html=True)
+    ss["country_select"] = ss["country"] if ss["country"] in choices else None
+    st.selectbox("나라 직접 고르기", choice_keys, key="country_select", index=None,
+                 placeholder="지구본을 누르거나 여기서 고르세요 (작은 나라 포함)",
+                 format_func=lambda k: choices[k], on_change=on_country_select)
+with right:
+    # 나라가 바뀔 때마다 새 컨테이너로 그려 '천천히 나타나는' 애니메이션이 다시 재생되게 한다
+    with st.container(key=f"country_panel_{ss['country'] or 'none'}"):
+        country_panel(ss["country"])
+
+
+# ---- ② 감염병 질문하기 ----------------------------------------------------------------
 def render_evidence(msg: dict) -> None:
     cited = msg.get("cited", [])
     for w in msg.get("warnings", []):
@@ -218,81 +295,6 @@ with st.container(key="chat_card"):
         find_view()
 
 
-# ---- ② 나라별 주의 감염병 (질병관리청 검역관리지역정보) ----------------------------------
-# 고를 수 있는 나라 = 검역관리지역 지정 국가 + 주요 여행지 점 + 대한민국
-choices: dict[str, str] = {k: w.name_ko for k, w in watch.countries.items()}
-choices.update({c.iso3: c.name_ko for c in countries})
-choice_keys = sorted(choices, key=lambda k: (k not in by_iso, choices[k]))  # 주요 여행지 먼저, 나머지 가나다순
-
-
-def country_panel(key: str | None) -> None:
-    if not key:
-        st.markdown("<div class='kd-country-name'>나라를 골라 주세요</div>", unsafe_allow_html=True)
-        if watch.loaded:
-            st.markdown(f"<div class='kd-muted'>{watch.as_of} 기준 검역관리지역으로 지정된 나라 "
-                        f"{len(watch.countries)}개국. 색이 진할수록 지정된 검역감염병이 많습니다.</div>",
-                        unsafe_allow_html=True)
-        else:
-            st.markdown("<div class='kd-muted'>지도에서 나라나 점을 누르면 그 나라의 검역관리지역 지정 감염병을 보여 줍니다.</div>",
-                        unsafe_allow_html=True)
-        st.markdown("".join(f"<span class='kd-chip'>{c.name_ko}</span>" for c in countries if not c.home),
-                    unsafe_allow_html=True)
-        return
-    st.markdown(f"<div class='kd-country-name'>{choices.get(key, key)}</div>", unsafe_allow_html=True)
-    if by_iso.get(key) and by_iso[key].home:
-        st.markdown("국내 법정감염병 133종의 급수·신고 기준과 설명은 위 **감염병 질문하기**에서 확인할 수 있어요.")
-        return
-    if not watch.loaded:
-        st.info("검역관리지역 정보를 아직 수집하지 않았습니다. 터미널에서 "
-                "`python -m scripts.fetch_quarantine`을 실행하세요.")
-        return
-    w = watch.countries.get(key)
-    if not w or not w.diseases:
-        st.success(f"{watch.as_of} 기준, 이 나라는 검역관리지역으로 지정된 검역감염병이 없습니다.")
-    else:
-        st.markdown(f"**주의가 필요해요** · 검역감염병 {len(w.diseases)}종")
-        for i, item in enumerate(w.diseases):
-            row = st.columns([3, 2], vertical_alignment="center")
-            row[0].markdown(f"- {item['name']}" + (f"  \n<span class='kd-muted'>{item['note']}</span>"
-                                                     if item.get("note") else ""), unsafe_allow_html=True)
-            did = item.get("disease_id")
-            if did in rt.by_id:
-                row[1].button("질문하기", key=f"ask_{key}_{i}", on_click=select_disease, args=(did,), width="stretch")
-    src = f"[{watch.source}]({watch.source_url})" if watch.source_url else watch.source
-    st.caption(f"기준일 {watch.as_of} · 출처 {src}  \n검역관리지역: 검역법에 따라 WHO·현지 공관 등의 감염병 발생 "
-               "정보를 기준으로 지정한 지역. 귀국 후 의심 증상이 있으면 1339에 문의하세요.")
-
-
-anchor("country")
-sub = (f"질병관리청 검역관리지역 {watch.as_of} 기준 · 지정 국가 {len(watch.countries)}개국. "
-       if watch.loaded else "검역관리지역 정보 수집 전입니다 (python -m scripts.fetch_quarantine). ")
-st.markdown("<div class='kd-section-title'>나라별 주의 감염병 알아보기</div>"
-            f"<div class='kd-sub'>{sub}출국 전 확인용 일반 정보이며, 최신 상황은 질병관리청 안내를 확인하세요.</div>",
-            unsafe_allow_html=True)
-
-picked = country_from_event(ss.get("world_map"), set(choices))
-if picked and picked != ss["_map_pick"]:  # 지도를 새로 눌렀을 때만 반영 (목록 선택을 덮어쓰지 않게)
-    ss["country"] = ss["_map_pick"] = picked
-
-left, right = st.columns([2.6, 1.15], gap="medium")
-with left:
-    with st.container(key="map_card"):
-        st.plotly_chart(build_world_map(countries, watch, ss["country"]), key="world_map", on_select="rerun",
-                        selection_mode="points", config=MAP_CONFIG)
-    st.markdown("<div class='kd-legend'>"
-                f"<span><i class='kd-dot' style='background:linear-gradient(90deg,{LOW},{HIGH})'></i>검역관리지역 (진할수록 감염병 많음)</span>"
-                f"<span><i class='kd-dot' style='background:{TARGET}'></i>주요 여행지</span>"
-                f"<span><i class='kd-dot' style='background:{SELECTED}'></i>선택한 나라</span></div>",
-                unsafe_allow_html=True)
-    ss["country_select"] = ss["country"] if ss["country"] in choices else None
-    st.selectbox("나라 직접 고르기", choice_keys, key="country_select", index=None,
-                 placeholder="지도를 누르거나 여기서 고르세요 (지도에 없는 작은 나라 포함)",
-                 format_func=lambda k: choices[k], on_change=on_country_select)
-with right:
-    with st.container(key="country_panel"):
-        country_panel(ss["country"])
-
-
 # ---- ③ 연령별 알아보기 (감염병포털 통계, scripts/build_age_stats.py) ---------------------------
 MODE_AGE, MODE_DISEASE, MODE_TREND = "연령대별 많이 신고된 감염병", "감염병별 연령 분포", "유행 시기"
 SARI_KEY = "sari"
@@ -343,7 +345,8 @@ def age_view() -> None:
     rows = top_for_age(aset, age, sex, by)
     names = [r["name"] for r in rows]
 
-    picked = country_from_event(ss.get("age_top_chart"), set(names))   # 막대 customdata[0] = 감염병 이름
+    chart_key = f"age_top_{set_id}_{age}_{sex}_{by}"   # 조건이 바뀌면 새 차트 → 막대가 자라는 애니메이션 재생
+    picked = country_from_event(ss.get(chart_key), set(names))   # 막대 customdata[0] = 감염병 이름
     if picked and picked != ss["_age_bar_pick"]:
         ss["age_pick"] = ss["_age_bar_pick"] = picked
     if ss["age_pick"] not in names:
@@ -354,11 +357,12 @@ def age_view() -> None:
         if not rows:
             st.info(f"{age} {'' if sex == '전체' else sex + ' '}신고 건수가 있는 감염병이 없습니다.")
         else:
-            st.plotly_chart(top_bar(rows, ss["age_pick"], by), key="age_top_chart", on_select="rerun",
-                            selection_mode="points", config=CHART_CONFIG)
+            with st.container(key="agebar_h"):
+                st.plotly_chart(top_bar(rows, ss["age_pick"], by), key=chart_key, on_select="rerun",
+                                selection_mode="points", config=CHART_CONFIG)
             st.caption(("연령대 비중 = 이 연령대 건수 ÷ 그 감염병 전체 건수 (전체 30건 이상만). " if by == "share" else "")
                        + "막대를 누르면 오른쪽에 자세히 보여 줍니다.")
-    with right, st.container(key="age_panel"):
+    with right, st.container(key=f"age_panel_a_{ss['age_pick']}"):
         st.markdown(f"<div class='kd-country-name'>{age}{'' if sex == '전체' else ' · ' + sex}</div>",
                     unsafe_allow_html=True)
         r = next((x for x in rows if x["name"] == ss["age_pick"]), None)
@@ -401,8 +405,9 @@ def disease_view() -> None:
         season = c[1].selectbox("절기", seasons, index=len(seasons) - 1, key="sari_season")
         by_age = stats.sari_seasons[season]
         with left:
-            st.plotly_chart(sari_bar(by_age), key="sari_chart", config=CHART_CONFIG)
-        with right, st.container(key="age_panel"):
+            with st.container(key="agebar_v"):
+                st.plotly_chart(sari_bar(by_age), key=f"sari_{season}", config=CHART_CONFIG)
+        with right, st.container(key=f"age_panel_s_{season}"):
             tot = sum(by_age.values())
             peak = max(by_age, key=by_age.get) if tot else "-"
             young = sum(v for a, v in by_age.items() if a in ("0세", "1-6세"))
@@ -417,8 +422,9 @@ def disease_view() -> None:
     aset, d = stats.sets[sid], stats.sets[sid].diseases[name]
     p = profile(d, stats.age_groups)
     with left:
-        st.plotly_chart(age_sex_bar(d, stats.age_groups, p["peak_age"]), key="age_dist_chart", config=CHART_CONFIG)
-    with right, st.container(key="age_panel"):
+        with st.container(key="agebar_v"):
+            st.plotly_chart(age_sex_bar(d, stats.age_groups, p["peak_age"]), key=f"age_dist_{key}", config=CHART_CONFIG)
+    with right, st.container(key=f"age_panel_d_{key}"):
         st.markdown(f"<div class='kd-country-name'>{d.name}</div>", unsafe_allow_html=True)
         grade = f"제{d.grade}급 · " if d.grade else ""
         st.markdown(f"<span class='kd-muted'>{grade}{aset.label}</span>", unsafe_allow_html=True)
@@ -445,9 +451,10 @@ def trend_view() -> None:
     sm = trend_summary(t, item)
     left, right = st.columns([2.6, 1.15], gap="medium")
     with left:
-        st.plotly_chart(trend_lines(t, item), key="trend_chart", config=CHART_CONFIG)
+        with st.container(key="agetrend"):
+            st.plotly_chart(trend_lines(t, item), key=f"trend_{tid}_{item_name}", config=CHART_CONFIG)
         st.caption(f"단위: {t.unit}. " + ("절기 = 그해 36주 ~ 다음 해 35주." if t.kind == "season" else "주 = 그해 몇째 주."))
-    with right, st.container(key="age_panel"):
+    with right, st.container(key=f"age_panel_t_{tid}_{item_name}"):
         st.markdown(f"<div class='kd-country-name'>{item_name}</div>", unsafe_allow_html=True)
         st.markdown(f"<span class='kd-muted'>{t.label}</span>", unsafe_allow_html=True)
         lines = []

@@ -202,7 +202,7 @@ class CountryNameTest(unittest.TestCase):
         watch = WatchData(True, "2026-10-22", "t", "", {
             "PYF": CountryWatch("PYF", "프랑스령폴리네시아", "PYF", [{"name": "뎅기열"}]),
             "TUN": CountryWatch("TUN", "튀니지", "TUN", [{"name": "콜레라"}, {"name": "황열"}])})
-        fig = build_world_map([], watch, "PYF")
+        fig = build_world_map(watch, "PYF", {})
         dots = next(t for t in fig.data if t.name == "작은 지정 국가 점")
         self.assertEqual([c[0] for c in dots.customdata], ["PYF"])      # 경계가 있는 튀니지는 영역으로만
         self.assertEqual(dots.marker.color[0], SELECTED)
