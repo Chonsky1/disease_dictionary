@@ -31,6 +31,15 @@ def _show(p: Path) -> str:
         return str(p)
 
 
+def find_files(folder: Path) -> list[Path]:
+    """하위 폴더까지 (압축을 풀면 폴더째 들어가는 경우가 많음). 엑셀 임시 파일(~$…)과 macOS 부속 파일은 제외."""
+    if not folder.exists():
+        return []
+    return sorted(p for p in folder.rglob("*")
+                  if p.is_file() and p.suffix.lower() in {".csv", ".xlsx"}
+                  and not p.name.startswith(("~$", "._")) and "__MACOSX" not in p.parts)
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dir", type=Path, default=STATS_DIR)
@@ -38,10 +47,15 @@ def main(argv=None) -> int:
     paths.ensure_dirs()
     if args.dir == STATS_DIR:
         STATS_DIR.mkdir(parents=True, exist_ok=True)
-    files = [p for p in args.dir.glob("*") if p.suffix.lower() in {".csv", ".xlsx"}] if args.dir.exists() else []
+    files = find_files(args.dir)
     if not files:
-        raise SystemExit(f"[x] {_show(args.dir)}에 CSV·xlsx 파일이 없습니다.\n"
-                         "    감염병포털에서 내려받은 통계 파일을 이 폴더에 넣고 다시 실행하세요.")
+        inside = sorted(p.name + ("/" if p.is_dir() else "") for p in args.dir.iterdir()) if args.dir.exists() else []
+        zips = [n for n in inside if n.lower().endswith(".zip")]
+        raise SystemExit(f"[x] {_show(args.dir.resolve())}에서 CSV·xlsx 파일을 찾지 못했습니다 (하위 폴더 포함).\n"
+                         f"    지금 폴더 안: {', '.join(inside[:10]) or '비어 있음'}\n"
+                         + ("    zip 파일은 압축을 먼저 풀어 주세요.\n" if zips else "")
+                         + "    감염병포털에서 내려받은 통계 파일을 이 폴더에 넣고 다시 실행하세요.")
+    print(f"[stats] {_show(args.dir)}에서 파일 {len(files)}개 발견")
     cols = load_columns(paths.CONFIG / "age_stats_columns.json")
     data, log = build_age_stats(files, load_diseases(paths.DISEASES_CSV), cols)
     save(OUT, data)

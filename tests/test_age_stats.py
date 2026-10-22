@@ -89,6 +89,18 @@ class BuildTest(_Tmp):
             self.assertIn("추정", report)
             with self.assertRaises(SystemExit):
                 bas.main(["--dir", str(self.tmp / "empty")])
+            # 압축을 풀어 하위 폴더째 넣은 경우도 찾음, 부속 파일은 제외
+            nested = self.tmp / "nested"
+            shutil.copytree(self.tmp / "in", nested / "감염병통계")
+            (nested / "__MACOSX").mkdir()
+            (nested / "__MACOSX" / "._x.csv").write_bytes(b"junk")
+            (nested / "~$열린파일.xlsx").write_bytes(b"lock")
+            self.assertEqual(len(bas.find_files(nested)), len(bas.find_files(self.tmp / "in")))
+            (self.tmp / "zipped").mkdir()
+            (self.tmp / "zipped" / "통계.zip").write_bytes(b"PK")
+            with self.assertRaises(SystemExit) as ctx:
+                bas.main(["--dir", str(self.tmp / "zipped")])
+            self.assertIn("압축을 먼저", str(ctx.exception))
 
 
 class ServiceTest(_Tmp):
