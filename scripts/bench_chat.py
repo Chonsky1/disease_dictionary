@@ -263,7 +263,8 @@ def ui_overhead(lat: dict) -> dict:
                 t0 = time.perf_counter()
                 at.chat_input[0].set_value(q).run()
                 wall = time.perf_counter() - t0
-                graph = at.session_state["chat_log"][-1]["timings"]["total_s"]
+                last = list(at.session_state["chat_logs"].values())[-1]
+                graph = last[-1]["timings"]["total_s"]
                 samples.append((wall, graph))
         return {"page_s": round(statistics.mean(w for w, _ in samples), 3),
                 "graph_s": round(statistics.mean(g for _, g in samples), 3),

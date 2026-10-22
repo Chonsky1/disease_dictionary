@@ -118,6 +118,7 @@ def ask(question: str, did: str, rt, history: list[dict], box, show_disease: boo
                 msg = {"role": "assistant", "content": state["answer"], "cited": state.get("cited", []),
                        "warnings": state.get("warnings", []), "disease_id": did, "timings": t}
                 render_answer(msg["content"])
+                st.markdown(f"<div class='kd-timing'>⏱ {describe(t)}</div>", unsafe_allow_html=True)
                 render_evidence(msg)
                 history.append(msg)
                 return msg

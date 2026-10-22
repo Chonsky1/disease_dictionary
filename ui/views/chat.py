@@ -2,7 +2,8 @@
 
 - 맨 위에 지금 질문 대상 감염병 이름을 크게, 그 아래에 급수·감시 방법·신고 기한.
 - 홈·상세보기 검색창에서 엔터 → 이 페이지로 오며 그 질문에 바로 답한다 (session_state["pending_q"]).
-- 질문에 감염병 이름이 있으면 자동으로 그 감염병으로 바뀐다 (F2009). 대화는 하나로 이어진다.
+- 대화 기록은 감염병마다 따로 유지한다 (F2009): 감염병을 바꾸면 그 감염병의 대화만 보인다.
+  질문에 다른 감염병 이름이 있으면 그 감염병의 대화로 옮겨 가서 답한다. 오른쪽 요약은 모든 대화를 모은다.
 - 답은 카테고리별 카드로, 걸린 시간과 근거는 작게 (ui/chat_core.py).
 - '이런 감염병 찾기': 조건으로 감염병 후보를 찾는다 (F2011).
 """
@@ -23,7 +24,7 @@ VIEW_CHAT, VIEW_FIND = "질의응답", "이런 감염병 찾기"
 EXAMPLES = ["어떻게 전파되나요?", "초기 증상은?", "잠복기는 얼마나 되나요?", "예방법을 알려 주세요"]
 rt = runtime()
 ss = st.session_state
-ss.setdefault("chat_log", [])          # [{role, content, disease_id, cited, warnings, timings}]
+ss.setdefault("chat_logs", {})         # {감염병 ID: [{role, content, disease_id, cited, warnings, timings}]}
 ss.setdefault("disease", rt.diseases[0].disease_id)
 ss.setdefault("chat_view", VIEW_CHAT)
 ss.setdefault("found", None)
@@ -35,6 +36,19 @@ if pending:                            # 다른 페이지의 검색창에서 온
     ss["disease"] = pending.get("disease_id") or guess_disease(pending["q"], rt) or ss["disease"]
 if "_next_disease" in ss:               # 질문 속 감염병으로 '질문 대상'을 맞춘다 (위젯 그리기 전에)
     ss["disease"] = ss.pop("_next_disease")
+
+
+def log_for(did: str) -> list[dict]:
+    return ss["chat_logs"].setdefault(did, [])
+
+
+def all_messages() -> list[dict]:
+    """요약용: 모든 감염병의 대화 (감염병별로 이어 붙임)."""
+    return [m for msgs in ss["chat_logs"].values() for m in msgs]
+
+
+def switch_to(did: str) -> None:
+    ss["disease"] = did
 
 
 # ---- 요약 -------------------------------------------------------------------------------
@@ -81,19 +95,22 @@ def summarize(log_: list[dict]) -> str:
 
 
 def summary_panel() -> None:
-    log_ = ss["chat_log"]
+    log_ = all_messages()
     st.markdown("<div class='kd-card-title'>📝 요약</div>", unsafe_allow_html=True)
     if not any(m["role"] == "assistant" for m in log_):
         st.markdown("<div class='kd-muted'>답을 받으면 여기에 정리됩니다.</div>", unsafe_allow_html=True)
         return
     with st.spinner("요약하는 중"):
         st.markdown(summarize(log_))
-    asked = list(dict.fromkeys(m["disease_id"] for m in log_ if m.get("disease_id") in rt.by_id))
-    for i, did in enumerate(asked[-4:]):
-        detail_button(did, f"sum_detail_{i}_{did}", f"🔎 {rt.by_id[did].display_name}", rt)
-    if st.button("대화 지우기", key="clear_chat", width="stretch", type="tertiary"):
-        ss["chat_log"], ss["summary"] = [], {"n": 0, "text": ""}
-        st.rerun()
+    asked = [did for did, msgs in ss["chat_logs"].items() if msgs and did in rt.by_id]
+    st.markdown("<div class='kd-muted' style='margin-top:.6rem'>대화한 감염병 (누르면 그 대화로)</div>",
+                unsafe_allow_html=True)
+    for i, did in enumerate(asked[-6:]):
+        c = st.columns([3, 1], gap="small", vertical_alignment="center")
+        c[0].button(("▶ " if did == ss["disease"] else "") + rt.by_id[did].display_name, key=f"sum_go_{i}_{did}",
+                    on_click=switch_to, args=(did,), width="stretch", disabled=did == ss["disease"])
+        with c[1]:
+            detail_button(did, f"sum_detail_{i}_{did}", "🔎", rt)
 
 
 def pick_example(q: str) -> None:
@@ -113,27 +130,32 @@ def chat_view() -> None:
     ids = [x.disease_id for x in rt.diseases]
     head[1].selectbox("감염병 바꾸기", ids, key="disease", format_func=lambda i: rt.by_id[i].label())
 
+    history = log_for(ss["disease"])
     left, right = st.columns([2.7, 1], gap="large")
     with left, st.container(key="chat_card"):
         box = st.container(height=470, border=False, key="chat_box")
         with box:
-            if not ss["chat_log"] and not pending:
+            if not history and not pending:
                 st.markdown("<div class='kd-muted'>이렇게 물어보세요</div>", unsafe_allow_html=True)
                 cols = st.columns(len(EXAMPLES))
                 for c, q in zip(cols, EXAMPLES):
                     c.button(q, key=f"ex_{q}", on_click=pick_example, args=(q,), width="stretch")
-            for msg in ss["chat_log"]:
-                show_message(msg, rt)
+            for msg in history:
+                show_message(msg, rt, show_disease=False)
         if pending:
-            ask(pending["q"], ss["disease"], rt, ss["chat_log"], box)
+            ask(pending["q"], ss["disease"], rt, history, box, show_disease=False)
         question = st.chat_input(f"{d.display_name}에 대해, 또는 다른 감염병 이름을 넣어 질문하세요")
         question = question or ss.pop("_example", None)
         if question:
             did = guess_disease(question, rt, use_search=False) or ss["disease"]
-            ask(question, did, rt, ss["chat_log"], box)
-            if did != ss["disease"]:
+            if did != ss["disease"]:      # 다른 감염병 질문 → 그 감염병의 대화로 옮겨 가서 답한다 (대화가 섞이지 않게)
                 ss["_next_disease"] = did
-                st.rerun()      # 맨 위 감염병 이름과 요약을 새 감염병으로
+                ss["pending_q"] = {"q": question, "disease_id": did}
+                st.rerun()
+            ask(question, did, rt, history, box, show_disease=False)
+        if history:
+            st.button(f"'{d.display_name}' 대화 지우기", key="clear_chat", type="tertiary",
+                      on_click=lambda: ss["chat_logs"].pop(ss["disease"], None))
     with right, st.container(key="chat_summary"):
         summary_panel()
 

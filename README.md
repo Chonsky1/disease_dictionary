@@ -16,7 +16,7 @@ source venv/Scripts/activate        # macOS/Linux: source venv/bin/activate
 export PYTHONUTF8=1                 # 한글 인코딩 오류 예방 (~/.bashrc에 넣어 두면 편함)
 pip install -r requirements.txt
 cp .env.example .env                # OPENAI_API_KEY, WIKI_USER_AGENT 입력
-python -m unittest discover -s tests -t .   # 키·네트워크 없이 88개 테스트
+python -m unittest discover -s tests -t .   # 키·네트워크 없이 90개 테스트
 ```
 
 ## 2. 색인 → 실행
@@ -81,7 +81,8 @@ streamlit run ui/app.py                        # 반드시 프로젝트 폴더�
 | 확인 항목 | 명령 |
 | --- | --- |
 | 4.1 로드 건수 = 색인 건수, 두 번 실행해도 불변, 색인 텍스트 | `python -m scripts.build_index` 2회 → `python -m scripts.inspect_index --disease 홍역` |
-| 4.2 프롬프트 1 검색어, 선별/버린 문서, 재질문 시 캐시 | `python -m scripts.ask --disease 홍역 "홍역은 어떻게 전파되나요?"` 2회 |
+| 4.2 프롬프트 1 검색어, 선별/버린 문서, 재질문 시 캐시 | `python -m scripts.ask --disease 홍역 "홍역은 어떻게 전파되나요?"` 2회 (검증용 기본 `--policy always`: 질문마다 검색어·선별 결과를 바로 출력, 저장 답변 끔) |
+| 4.2 앱 기본값(배경 수집)에서의 수집 결과 | `python -m scripts.ask --disease 홍역 --policy background "…"` → 답변 뒤 `[배경 수집]` 줄. 화면에서는 같은 감염병의 다음 답변 진행 상태에 "지난 질문 뒤 배경 수집 완료 · 검색어(프롬프트 1) …", "새로 색인한 문서(프롬프트 2 선별) …" 표시 |
 | 4.2 청크 설정 변경 시 청크 수 | `python -m scripts.build_index --rechunk --chunk-size 500 --chunk-overlap 100` |
 | 4.3 Top-k 변경, MMR 비교 | `python -m scripts.ask --disease 홍역 --top-k 8 --search-type mmr --no-collect "…"` |
 | 4.3 2노드 그래프 구조 | `python -m scripts.inspect_index` (Mermaid 출력) |
@@ -104,6 +105,7 @@ streamlit run ui/app.py                        # 반드시 프로젝트 폴더�
 
 | 날짜 | 내용 |
 | --- | --- |
+| 2026-10-22 | 요구사항 보완: 감염병 질문하기 페이지에서 감염병별 대화 기록 따로 보관(F2009, 다른 감염병으로 바꿔도 이전 대화 유지, '대화 지우기'는 현재 감염병만), 대화 요약에 '대화한 감염병' 이동 버튼. 배경 수집 결과(검색어·새로 색인한 문서·버린 후보)를 다음 답변 진행 상태에 표시(F2003·F2004·F2012), `scripts.ask --policy`(기본 always)·`--use-cache` |
 | 2026-10-22 | 단계 1: 법정감염병 목록 + 위키백과 RAG (LangGraph 2노드, Chroma 2컬렉션), 질의응답·조건 탐색 화면 |
 | 2026-10-22 | 화면 개편: 상단 내비게이션, 한 페이지 3섹션, 클릭 가능한 세계 지도 (지도 경계 파일 동봉) |
 | 2026-10-22 | 단계 3: 검역관리지역 API(`/QuarantineRegion/NationDisease`) 연동, 176개국 지도 표시, 작은 섬나라 점 표시, `--raw` 재처리 |

@@ -87,6 +87,30 @@ class SpeedTest(unittest.TestCase):
                 t.join(10)
         self.assertGreater(len(svc.store.list_docs(self.did)), 1)                 # 배경에서 검색어 문서까지
 
+    def test_background_report_shown_next_answer(self):
+        """배경 수집 결과(프롬프트 1 검색어·새로 색인한 문서)를 다음 답변 진행 상태에 보여 준다 (F2003·F2004·F2012)."""
+        import threading
+        svc = self.svc(collect_policy="background")
+        ev1: list = []
+        self.ask(svc, events=ev1)
+        self.assertTrue(any("배경에서 모읍니다" in e.get("message", "") for e in ev1))
+        for t in threading.enumerate():
+            if t.name.startswith("collect-"):
+                t.join(10)
+        report = svc.background_log[self.did]
+        self.assertTrue(report["queries"])
+        ev2: list = []
+        second = self.ask(svc, "홍역의 예방법은?", events=ev2)
+        msgs = [e.get("message", "") for e in ev2]
+        self.assertTrue(any(m.startswith("지난 질문 뒤 배경 수집 완료 · 검색어(프롬프트 1):") for m in msgs), msgs)
+        self.assertTrue(any(m.startswith("새로 색인한 문서(프롬프트 2 선별):") for m in msgs), msgs)
+        self.assertEqual(second["background_report"]["queries"], report["queries"])
+        self.assertNotIn(self.did, svc.background_log)      # 한 번 보여 주면 비움
+
+    def test_describe_background_error(self):
+        from rag.graph import describe_background
+        self.assertIn("실패", describe_background({"error": "Timeout"})[0])
+
     def test_parallel_same_result_as_sequential(self):
         a = self.ask(self.svc("par", collect_policy="always", parallel_collect=True))
         b = self.ask(self.svc("seq", collect_policy="always", parallel_collect=False))

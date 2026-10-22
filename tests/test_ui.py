@@ -97,13 +97,22 @@ class UiTest(_UiBase):
         self.assertIn("⏱", texts)                                              # 답변 시간 표시
         self.assertIn("LLM", texts)
         self.assertNotIn("[근거", at.session_state["summary"]["text"])
-        # 다른 감염병 질문도 한 대화로 이어짐
+        # F2009: 다른 감염병 질문 → 그 감염병의 대화로 옮겨 가고, 이전 대화는 섞이지 않음
+        measles = at.session_state["disease"]
         at.chat_input[0].set_value("수두는 몇 급인가요?").run()
-        self.assertEqual(rt.by_id[at.session_state["disease"]].display_name, "수두")
-        self.assertEqual(len(at.session_state["chat_log"]), 4)
+        chickenpox = at.session_state["disease"]
+        self.assertEqual(rt.by_id[chickenpox].display_name, "수두")
+        logs = at.session_state["chat_logs"]
+        self.assertEqual((len(logs[measles]), len(logs[chickenpox])), (2, 2))
+        self.assertNotIn("홍역은 어떻게 전파되나요", md(at))                      # 수두 화면에 홍역 대화 없음
+        self.assertIn("수두는 몇 급인가요?", md(at))
+        self.assertIn("- **홍역**:", md(at))                                     # 요약은 모든 대화를 모음
+        at.selectbox(key="disease").set_value(measles).run()                      # 홍역으로 돌아가면 홍역 대화만
         self.assertIn("홍역은 어떻게 전파되나요", md(at))
-        next(b for b in at.button if b.key == "clear_chat").click().run()
-        self.assertEqual(at.session_state["chat_log"], [])
+        self.assertNotIn("수두는 몇 급인가요?", md(at))
+        next(b for b in at.button if b.key == "clear_chat").click().run()        # 지우기는 이 감염병만
+        self.assertFalse(at.session_state["chat_logs"].get(measles))
+        self.assertEqual(len(at.session_state["chat_logs"][chickenpox]), 2)
         self.assertEqual(len(at.exception), 0)
 
     def test_condition_search(self):
@@ -155,7 +164,8 @@ class HomeTest(_UiBase):
         next(b for b in at.button if b.label == "→").click().run()
         self.assertIn("📝 요약", md(at))                       # 질문하기 페이지로 이동해 바로 답함
         self.assertEqual(rt.by_id[at.session_state["disease"]].display_name, "홍역")
-        self.assertEqual([m["role"] for m in at.session_state["chat_log"]], ["user", "assistant"])
+        logs = at.session_state["chat_logs"]
+        self.assertEqual([m["role"] for m in logs[at.session_state["disease"]]], ["user", "assistant"])
         self.assertEqual(len(at.exception), 0)
 
     def test_country_popup_detail_and_close(self):
@@ -223,7 +233,7 @@ class DetailTest(_UiBase):
         self.assertIn("kd-detail-name", md(at))                      # 페이지 그대로
         self.assertEqual([m["role"] for m in at.session_state["detail_chat"][did]], ["user", "assistant"])
         self.assertIn("어떻게 예방하나요?", md(at))
-        self.assertNotIn("chat_log", at.session_state)
+        self.assertNotIn("chat_logs", at.session_state)
         self.assertEqual(len(at.exception), 0)
 
     def test_wiki_summary_countries_and_trend(self):

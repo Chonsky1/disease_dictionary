@@ -63,6 +63,7 @@ class RagState(TypedDict, total=False):
     cited: list[dict]
     meter: Any              # rag.metrics.Meter (run()이 넣어 줌)
     timings: dict
+    background_report: dict  # 지난 질문 뒤 배경 수집 결과 (검색어·새로 색인한 문서·버린 후보), F2003·F2004·F2012 표시용
 
 
 @dataclass
@@ -77,6 +78,7 @@ class RagServices:
     answer_cache: AnswerCache | None = None
     index_lock: threading.Lock = field(default_factory=threading.Lock)   # 색인 쓰기 (배경 수집과 겹치지 않게)
     background: set = field(default_factory=set)  # 배경 수집 중인 감염병 ID
+    background_log: dict = field(default_factory=dict)   # 감염병 ID → 마지막 배경 수집 결과 (다음 답변에서 보여 줌)
 
     @property
     def helper_llm(self) -> BaseChatModel:
@@ -190,8 +192,15 @@ def make_retrieve(svc: RagServices):
                     log.exception("항목 문서 수집 실패")
             have_docs = svc.store.docs_count(did) >= int(svc.opt("min_docs_for_fast", 1))
         fast = policy in ("when_needed", "background") and have_docs and svc.collector is not None
+        report = None
         if fast:
             meter.note(f"수집 생략 ({'배경 수집' if policy == 'background' else '이미 모은 문서 사용'})")
+            report = svc.background_log.pop(did, None)
+            if report:      # 지난 질문 뒤 배경에서 한 수집 결과를 이번 진행 상태에 보여 준다
+                for msg in describe_background(report):
+                    _emit({"stage": "collect", "message": msg})
+            if did in svc.background:
+                _emit({"stage": "collect", "message": "배경에서 문서를 모으는 중입니다 (다음 답변부터 반영)"})
             _emit({"stage": "collect", "message": "이미 모은 문서로 바로 답합니다"})
         else:
             with meter.stage("queries"):
@@ -222,9 +231,11 @@ def make_retrieve(svc: RagServices):
             hits = svc.store.search_docs(question, did)
             evidence = build_evidence(meta_doc, hits)
         if fast and policy == "background":
-            start_background_collect(svc, did, question)
+            if start_background_collect(svc, did, question):
+                _emit({"stage": "collect", "message": "이 질문에 맞는 추가 문서는 답한 뒤 배경에서 모읍니다 "
+                                                      "(검색어 추출 → 후보 선별 → 색인, 다음 답변에 결과 표시)"})
         return {"queries": queries, "collect_log": collect_log, "warnings": warnings, "evidence": evidence,
-                "meter": meter}
+                "meter": meter, "background_report": report or {}}
     return retrieve
 
 
@@ -306,17 +317,34 @@ def start_background_collect(svc: RagServices, did: str, question: str) -> threa
     svc.background.add(did)
 
     def job():
+        report = {"question": question, "queries": [], "rows": [], "error": ""}
         try:
             meta = svc.store.get_meta(did)
-            queries = extract_queries(svc.helper_llm, meta.page_content, question, svc.settings["max_queries"])
-            _collect(svc, svc.diseases[did], question, queries)
-        except Exception:  # noqa: BLE001
+            report["queries"] = extract_queries(svc.helper_llm, meta.page_content, question,
+                                                svc.settings["max_queries"])
+            report["rows"] = _collect(svc, svc.diseases[did], question, report["queries"])
+        except Exception as exc:  # noqa: BLE001
             log.exception("배경 수집 실패: %s", did)
+            report["error"] = type(exc).__name__
         finally:
+            svc.background_log[did] = report
             svc.background.discard(did)
     t = threading.Thread(target=job, name=f"collect-{did}", daemon=True)
     t.start()
     return t
+
+
+def describe_background(report: dict) -> list[str]:
+    """배경 수집 결과 → 진행 상태 줄 (프롬프트 1 검색어, 프롬프트 2 선별 결과, 새로 색인한 문서)."""
+    if report.get("error"):
+        return [f"지난 질문 뒤 배경 수집이 실패했습니다 ({report['error']}). 이미 모은 문서로 답합니다."]
+    rows = [r for r in report.get("rows", []) if r.get("kind") == "query"]
+    new = [t for r in report.get("rows", []) for t in r.get("indexed", [])]
+    rejected = [t for r in rows for t in r.get("rejected", [])]
+    lines = [f"지난 질문 뒤 배경 수집 완료 · 검색어(프롬프트 1): {', '.join(report.get('queries') or []) or '없음'}"]
+    lines.append(f"새로 색인한 문서(프롬프트 2 선별): {', '.join(new) if new else '없음 (이미 수집했거나 고른 문서 없음)'}"
+                 + (f" · 버린 후보 {len(rejected)}건" if rejected else ""))
+    return lines
 
 
 def make_generate(svc: RagServices):
