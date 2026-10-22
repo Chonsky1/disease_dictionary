@@ -157,6 +157,15 @@ class QuotaTest(unittest.TestCase):
         self.assertFalse(is_quota_error(ValueError("다른 오류")))
 
 
+class AnswerToneTest(unittest.TestCase):
+    def test_polite_tone_and_cache_version(self):
+        from rag.prompts import ANSWER_GENERATION, ANSWER_PROMPT_VERSION
+        system = ANSWER_GENERATION.messages[0].prompt.template
+        self.assertIn("'~입니다', '~합니다' 체", system)
+        self.assertIn("안내원", system)                 # 가짜 모델이 답변 프롬프트를 알아보는 단어 유지
+        self.assertNotEqual(ANSWER_PROMPT_VERSION, "v2-categories")   # 예전 말투로 저장된 답은 다시 쓰지 않음
+
+
 class AnswerFormatTest(unittest.TestCase):
     def test_split_sections(self):
         text = ("### 핵심 답변\n공기로 전파됩니다 [근거 2].\n\n### 전염성·전파 경로\n- 기침 [근거 2]\n"
