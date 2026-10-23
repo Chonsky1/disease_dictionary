@@ -16,6 +16,8 @@
 """
 from __future__ import annotations
 
+import hashlib
+
 from data_prep.diseases import Disease
 from service.age import AgeStats, profile, trend_summary
 from service.countries import WatchData
@@ -56,6 +58,15 @@ def quarantine_pages(watch: WatchData, by_id: dict[str, Disease], license_: str 
     return pages
 
 
+def _key(name: str) -> str:
+    """같은 감염병에 이름이 다른 통계 항목이 여럿일 때(예: 엔테로바이러스 아형별) doc_id가 겹치지 않게."""
+    return hashlib.sha1(name.encode("utf-8")).hexdigest()[:8]
+
+
+def _suffix(item_name: str, d: Disease) -> str:
+    return "" if item_name.replace(" ", "") == d.display_name.replace(" ", "") else f" ({item_name})"
+
+
 def _pct(x: float) -> str:
     return f"{x * 100:.0f}%"
 
@@ -80,7 +91,8 @@ def stats_pages(stats: AgeStats, by_id: dict[str, Disease], license_: str = "") 
                     f"0~9세 비중 {_pct(p['kids_share'])}, 65세 이상 비중 {_pct(p['old_share'])}.\n"
                     f"연령대별 신고 건수: {ages}. 신고 건수이며 인구 대비 발생률이 아니다.")
             out.setdefault(ad.disease_id, []).append({
-                "doc_id": f"kdca-stats-{sid}-{ad.disease_id}", "title": f"{d.display_name} 연령·성별 신고 현황",
+                "doc_id": f"kdca-stats-{sid}-{ad.disease_id}-{_key(ad.name)}",
+                "title": f"{d.display_name} 연령·성별 신고 현황{_suffix(ad.name, d)}",
                 "url": stats.source_url, "sections": [("연령·성별", text)], "source_type": "public_stats",
                 "source_label": STATS_LABEL, "license": license_, "fetched_at": stats.generated_at,
                 "chunking": "record"})
@@ -97,7 +109,8 @@ def stats_pages(stats: AgeStats, by_id: dict[str, Disease], license_: str = "") 
             text = (f"{d.display_name} 유행 시기 ({trend.label}, 단위: {trend.unit}). "
                     f"보통 유행하는 달: {s['typical_month'] or '확인 불가'}. 해·절기별 정점: {peak_txt}.")
             out.setdefault(item.disease_id, []).append({
-                "doc_id": f"kdca-trend-{tid}-{item.disease_id}", "title": f"{d.display_name} 유행 시기",
+                "doc_id": f"kdca-trend-{tid}-{item.disease_id}-{_key(item.name)}",
+                "title": f"{d.display_name} 유행 시기{_suffix(item.name, d)}",
                 "url": stats.source_url, "sections": [("유행 시기", text)], "source_type": "public_stats",
                 "source_label": STATS_LABEL, "license": license_, "fetched_at": stats.generated_at,
                 "chunking": "record"})
