@@ -4,6 +4,8 @@ python -m scripts.verify_checklist --xlsx "AI코어_셀프체크리스트.xlsx" 
 python -m scripts.verify_checklist --xlsx ... --no-screens                              # 화면 캡처 없이
 python -m scripts.verify_checklist --xlsx ... --only 1,2                               # 일부 항목만 다시 (나머지는 지난 결과 유지)
 python -m scripts.verify_checklist --xlsx ... --fill-only                              # 다시 실행하지 않고 지난 결과로 xlsx만
+python -m scripts.verify_checklist --xlsx ... --fill-only --import-log run1.txt --import-log run2.txt
+                                                       # 콘솔 출력을 저장해 둔 파일에서 결과 복원 (뒤 파일이 우선)
 python -m scripts.verify_checklist --xlsx ... --offline                                # 키 없이 도구 동작만 확인 (제출용 아님)
 
 하는 일
@@ -641,6 +643,8 @@ def main(argv=None) -> int:
     ap.add_argument("--offline", action="store_true", help="키 없이 가짜 모델로 도구만 시험 (결과는 제출용 아님)")
     ap.add_argument("--only", help="항목 번호 (예: 1,2,3). 나머지 항목은 지난 결과(검증결과/results.json)를 그대로 쓴다")
     ap.add_argument("--fill-only", action="store_true", help="다시 실행하지 않고 지난 결과로 문서·xlsx만 만든다")
+    ap.add_argument("--import-log", action="append", default=[],
+                    help="지난 실행의 콘솔 출력을 저장한 파일 (여러 번 지정 가능, 뒤 파일이 우선)")
     args = ap.parse_args(argv)
     xlsx = resolve_xlsx(args.xlsx)
     if args.xlsx and xlsx is None:
@@ -655,7 +659,7 @@ def main(argv=None) -> int:
         env.update(KDCA_OFFLINE_DEMO="1", KDCA_DATA_DIR=str(data), OPENAI_API_KEY="offline-demo",
                    WIKI_USER_AGENT="kdca-rag-offline (contact: offline@example.com)")
         subprocess.run([PY, "-m", "scripts.offline_env", "--prepare"], cwd=paths.ROOT, env=env, check=True)
-    else:
+    elif not args.fill_only:      # 다시 실행하지 않으면 키가 필요 없다
         from rag.llm import missing_keys
         if missing_keys():
             print("필요한 환경변수가 없습니다:", ", ".join(missing_keys()), "→ .env 확인 (키 없이 시험하려면 --offline)")
@@ -668,7 +672,10 @@ def main(argv=None) -> int:
             print("[!] playwright가 없어 화면 캡처를 생략합니다: pip install playwright && python -m playwright install chromium")
             screens = False
     v = Verifier(out, args.offline, screens, env)
-    saved = load_saved(v) if (args.only or args.fill_only) else {}
+    saved = load_saved(v) if (args.only or args.fill_only or args.import_log) else {}
+    for log_file in args.import_log:
+        n = import_log(v, Path(log_file))
+        saved = saved or ({"results": True} if n else {})
     if args.fill_only:
         if not saved:
             print(f"지난 결과가 없습니다: {out / '검증결과' / 'results.json'}")
@@ -739,6 +746,41 @@ def resolve_xlsx(arg: str | None) -> Path | None:
 
 def results_path(v: Verifier) -> Path:
     return v.out / "검증결과" / "results.json"
+
+
+ITEM_REQ = {1: "F2001", 2: "F2002", 3: "F2003 · F2004", 4: "F2004 · NF2002", 5: "F2005", 6: "F2006", 7: "F2007",
+            8: "F2008", 9: "F2007 · F2008", 10: "F2009", 11: "F2011", 12: "F2010", 13: "F2012", 14: "F2012",
+            15: "F2013", 16: "F2014", 17: "F2015", 18: "F2015", 19: "F2016", 20: "NF2001", 21: "NF2003 · NF2004",
+            22: "NF2005", 23: "NF2006", 24: "NF2007"}
+ITEM_SHOTS = {8: ["S08"], 9: ["S09"], 10: ["S10a", "S10b"], 12: ["S12"], 13: ["S13a", "S13b", "S13c", "S13d"],
+              14: ["S14"], 19: ["S19", "S12"], 21: ["S21", "S13d"]}
+
+
+def import_log(v: Verifier, path: Path) -> int:
+    """콘솔 출력의 '[통과]  3 F2003 · F2004 · 비고' 줄에서 결과를 복원. 증빙 파일은 evidence 폴더에서 다시 찾는다."""
+    if not path.exists():
+        print(f"[!] 로그 파일이 없습니다: {path}")
+        return 0
+    try:
+        v.shots = v.shots or {s["id"]: s for s in json.loads((v.ev / "screens.json").read_text(encoding="utf-8"))}
+    except (OSError, ValueError):
+        pass
+    text = path.read_bytes().decode("utf-8", errors="replace")
+    n = 0
+    for m in re.finditer(r"^\s*\[(통과|실패|미확인|해당없음)\]\s+(\d+) (.*)$", text, flags=re.M):
+        no, rest = int(m.group(2)), m.group(3).strip()
+        if no not in ITEM_REQ:       # 25~27은 다시 계산
+            continue
+        req = ITEM_REQ[no]
+        note = rest[len(req):].lstrip(" ·") if rest.startswith(req) else rest
+        files = sorted((f.name for f in v.ev.glob(f"{no:02d}_*")), key=lambda f: (not f.endswith(".png"), f))
+        files += v.shot_files(*ITEM_SHOTS.get(no, []))
+        if no == 18 and m.group(1) == PASS:
+            files = ["docs/RAG_COMPARISON.md"]
+        v.results[no] = Result(no, req, m.group(1), list(dict.fromkeys(files)), note)
+        n += 1
+    print(f"[검증] {path.name}에서 결과 {n}줄을 복원")
+    return n
 
 
 def load_saved(v: Verifier) -> dict:

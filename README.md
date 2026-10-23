@@ -116,6 +116,7 @@ python -m scripts.verify_checklist --xlsx "셀프체크리스트.xlsx" --author 
 python -m scripts.verify_checklist --xlsx "셀프체크리스트.xlsx" --offline        # 키 없이 도구만 시험 (제출용 아님)
 python -m scripts.verify_checklist --xlsx "셀프체크리스트.xlsx" --only 1,2       # 일부 항목만 다시 (나머지는 지난 결과 유지)
 python -m scripts.verify_checklist --xlsx "셀프체크리스트.xlsx" --fill-only      # 다시 실행하지 않고 지난 결과로 xlsx만
+python -m scripts.verify_checklist --xlsx "셀프체크리스트.xlsx" --fill-only --import-log run1.txt --import-log run2.txt  # 콘솔 출력 파일에서 복원
 ```
 
 결과: `submission/evidence/`(항목별 실행 출력 `NN_*.txt/png`, 화면 캡처 `S08_*.png` …), `submission/셀프체크리스트_결과.xlsx`(결과·증빙·비고 기입),
@@ -152,6 +153,7 @@ F2005 확인은 청크 설정을 500/100으로 바꿔 재색인한 뒤 원래 �
 
 | 날짜 | 내용 |
 | --- | --- |
+| 2026-10-23 | 검증 도구: `--import-log`로 저장해 둔 콘솔 출력에서 결과 복원(증빙 파일은 evidence 폴더에서 다시 연결), `--fill-only`는 키 없이 실행 |
 | 2026-10-23 | 검증 도구 보완: 체크리스트 파일 경로를 실행 전에 확인(없으면 비슷한 이름을 찾아 씀), 결과 저장(`검증결과/results.json`)과 `--only` 재실행 시 지난 결과 유지·`--fill-only`, 색인 실패 시 원인 한 줄 표시·한 번 재시도. 색인: 내용이 같은 메타데이터·공공데이터 문서는 다시 임베딩하지 않고, 임베딩을 100개씩 묶어 요청(재실행이 빨라지고 API 일시 오류에 덜 노출) |
 | 2026-10-23 | `requirements-dev.txt` 주석을 영문으로 (Windows pip이 cp949로 읽어 설치 실패하던 문제), 이를 검사하는 테스트 |
 | 2026-10-23 | 셀프 체크리스트 대응: 검증·증빙 자동 생성(`verify_checklist`, `capture_screens`, `explore_check`, `travel_check`, `scan_secrets`), 오프라인 모의 실행(`KDCA_OFFLINE_DEMO`, `KDCA_DATA_DIR`). 심화 F2016 공공데이터 레코드 문서 색인·근거 출처 종류 배지, F2010 여행 전 안내(근거 포함), F2015 RAG 전후 비교(`compare_rag`), F2011 급수·신고 범위 필터와 결과 재대조. 요구사항 정의서·RAG 설계문서 |
