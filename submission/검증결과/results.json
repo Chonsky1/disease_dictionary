@@ -159,6 +159,12 @@
         "ok"
       ],
       [
+        "test_same_disease_two_stat_items_unique_ids",
+        "tests.test_public_docs.PublicDocsTest.test_same_disease_two_stat_items_unique_ids",
+        "한 감염병에 이름이 다른 통계 항목이 둘(예: 엔테로바이러스 아형) → doc_id가 달라 한 번에 색인돼도 오류 없음.",
+        "ok"
+      ],
+      [
         "test_stats_record_doc",
         "tests.test_public_docs.PublicDocsTest.test_stats_record_doc",
         "",
@@ -360,7 +366,7 @@
         "test_script_twice_same_count",
         "tests.test_stage1.BuildIndexScriptTest.test_script_twice_same_count",
         "",
-        "ERROR"
+        "ok"
       ],
       [
         "test_index_text_has_all_attributes",
@@ -531,10 +537,10 @@
         "ok"
       ]
     ],
-    "ok": false,
-    "total": 106,
-    "sec": 48.3,
-    "tail": "ase\\kdca-rag-stage1\\kdca-rag\\venv\\Lib\\site-packages\\langchain_chroma\\vectorstores.py\", line 651, in add_texts\n    self._collection.upsert(\n  File \"C:\\Users\\SSAFY\\Desktop\\disease\\kdca-rag-stage1\\kdca-rag\\venv\\Lib\\site-packages\\chromadb\\api\\models\\Collection.py\", line 521, in upsert\n    upsert_request = self._validate_and_prepare_upsert_request(\n                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\SSAFY\\Desktop\\disease\\kdca-rag-stage1\\kdca-rag\\venv\\Lib\\site-packages\\chromadb\\api\\models\\CollectionCommon.py\", line 103, in wrapper\n    return func(self, *args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\SSAFY\\Desktop\\disease\\kdca-rag-stage1\\kdca-rag\\venv\\Lib\\site-packages\\chromadb\\api\\models\\CollectionCommon.py\", line 441, in _validate_and_prepare_upsert_request\n    validate_insert_record_set(record_set=upsert_records)\n  File \"C:\\Users\\SSAFY\\Desktop\\disease\\kdca-rag-stage1\\kdca-rag\\venv\\Lib\\site-packages\\chromadb\\api\\types.py\", line 445, in validate_insert_record_set\n    validate_ids(record_set[\"ids\"])\n  File \"C:\\Users\\SSAFY\\Desktop\\disease\\kdca-rag-stage1\\kdca-rag\\venv\\Lib\\site-packages\\chromadb\\api\\types.py\", line 1039, in validate_ids\n    raise errors.DuplicateIDError(message)\nchromadb.errors.DuplicateIDError: Expected IDs to be unique, found duplicates of: inf_0133:kdca-trend-pw_엔테로바이러스감염증-inf_0133:0000 in upsert.\n\n----------------------------------------------------------------------\nRan 106 tests in 45.774s\n\nFAILED (errors=1)\n"
+    "ok": true,
+    "total": 107,
+    "sec": 44.8,
+    "tail": "ng ScriptRunContext! This warning can be ignored when running in bare mode.\nok\ntest_condition_search (tests.test_ui.UiTest.test_condition_search) ... 2026-10-23 12:33:07.524 No runtime found, using MemoryCacheStorageManager\n2026-10-23 12:33:08.104 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\nok\ntest_empty_index_notice (tests.test_ui.UiTest.test_empty_index_notice) ... 2026-10-23 12:33:08.464 No runtime found, using MemoryCacheStorageManager\n2026-10-23 12:33:08.792 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\nok\ntest_missing_key_notice (tests.test_ui.UiTest.test_missing_key_notice) ... 2026-10-23 12:33:09.052 No runtime found, using MemoryCacheStorageManager\n2026-10-23 12:33:09.052 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\nok\ntest_cases_from_data (tests.test_verify.CompareRagTest.test_cases_from_data) ... ok\ntest_judge (tests.test_verify.CompareRagTest.test_judge) ... ok\ntest_post_filter_drops_mismatch (tests.test_verify.ExploreRuleTest.test_post_filter_drops_mismatch) ... ok\ntest_structured_conditions (tests.test_verify.ExploreRuleTest.test_structured_conditions) ... ok\ntest_counts (tests.test_verify.VerifyToolTest.test_counts) ... ok\ntest_parse_ask (tests.test_verify.VerifyToolTest.test_parse_ask) ... ok\n\n----------------------------------------------------------------------\nRan 107 tests in 42.610s\n\nOK\n"
   },
   "results": {
     "1": {
@@ -804,12 +810,12 @@
     "27": {
       "no": 27,
       "req": "필수",
-      "status": "미확인",
+      "status": "통과",
       "files": [
         "요구사항_대조표.md",
         "테스트_결과표.md"
       ],
-      "note": "요구사항 정의서·설계문서·소스·README·대조표·테스트 결과표·셀프 체크리스트 포함 / 상호 체크리스트는 옆 교육생 점검 후 submission/에 추가해야 함"
+      "note": "요구사항 정의서·설계문서·소스·README·대조표·테스트 결과표·셀프 체크리스트·상호 점검 피드백(체크리스트 맨 아래) 포함"
     }
   }
 }
