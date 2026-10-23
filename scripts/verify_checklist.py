@@ -807,6 +807,21 @@ def load_saved(v: Verifier) -> dict:
     return data or {"results": True}
 
 
+def peer_feedback(path: Path) -> bool:
+    """체크리스트 맨 아래 상호 점검 피드백('잘한 것 하나', '개선할 것 하나')이 채워져 있는가."""
+    try:
+        import openpyxl
+        ws = openpyxl.load_workbook(path)["체크리스트"]
+    except Exception:  # noqa: BLE001 - 파일이 없거나 양식이 다르면 '없음'
+        return False
+    filled = {}
+    for row in ws.iter_rows(min_row=36):
+        label = str(row[1].value or "").strip()       # B열
+        if label in ("잘한 것 하나", "개선할 것 하나"):
+            filled[label] = any(str(c.value or "").strip() for c in row[2:])
+    return len(filled) == 2 and all(filled.values())
+
+
 def finish(v: Verifier, tests: dict, xlsx: Path | None, author: str) -> None:
     """25~27 제출 전 점검을 다시 계산하고 문서·xlsx·results.json을 쓴다."""
     for n in (25, 26, 27):
@@ -830,9 +845,12 @@ def finish(v: Verifier, tests: dict, xlsx: Path | None, author: str) -> None:
     deliver = {"요구사항 정의서": paths.ROOT / "docs" / "REQUIREMENTS.md", "RAG 파이프라인 설계문서": paths.ROOT / "docs" / "RAG_DESIGN.md",
                "README.md": paths.ROOT / "README.md", "요구사항 대조표": docs_written[0], "테스트 결과표": docs_written[1]}
     miss = [k for k, p in deliver.items() if not p.exists()]
-    peer = list(out.glob("*상호*.xlsx"))
-    note = ("요구사항 정의서·설계문서·소스·README·대조표·테스트 결과표·셀프 체크리스트 포함"
-            + ("" if peer else " / 상호 체크리스트는 옆 교육생 점검 후 submission/에 추가해야 함"))
+    peer = [p.name for p in out.glob("*상호*.xlsx")]
+    if not peer and peer_feedback(xlsx or out / "셀프체크리스트_결과.xlsx"):
+        peer = ["상호 점검 피드백(체크리스트 맨 아래)"]
+    note = ("요구사항 정의서·설계문서·소스·README·대조표·테스트 결과표·셀프 체크리스트"
+            + (f"·{peer[0]} 포함" if peer else " 포함 / 상호 체크리스트는 옆 교육생 점검 후 submission/에 추가하거나 "
+                                                  "체크리스트 맨 아래 상호 점검 피드백 칸을 채워야 함"))
     v.set(27, "필수", PASS if not miss and peer and not v.offline else UNK, [p.name for p in docs_written[:2]],
           note if not miss else f"빠진 문서: {', '.join(miss)}")
     write_docs(v, tests)      # 25~27 반영해 다시 씀
