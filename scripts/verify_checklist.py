@@ -680,7 +680,8 @@ def main(argv=None) -> int:
         if not saved:
             print(f"지난 결과가 없습니다: {out / '검증결과' / 'results.json'}")
             return 2
-        finish(v, saved.get("tests") if isinstance(saved.get("tests"), dict) else run_tests(v), xlsx, args.author)
+        print("\n== 자동 테스트 (키 없이, 다시 실행)")
+        finish(v, run_tests(v), xlsx, args.author)
         return 0
     only = {int(x) for x in args.only.split(",")} if args.only else None
     want = (lambda *nos: not only or any(n in only for n in nos))

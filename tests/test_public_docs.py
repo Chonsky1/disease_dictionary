@@ -75,6 +75,20 @@ class PublicDocsTest(unittest.TestCase):
         self.assertGreater(r3["removed"], 0)
         self.assertNotIn("public_api", self.store.count_by_type())
 
+    def test_same_disease_two_stat_items_unique_ids(self):
+        """한 감염병에 이름이 다른 통계 항목이 둘(예: 엔테로바이러스 아형) → doc_id가 달라 한 번에 색인돼도 오류 없음."""
+        from service.age import Trend, TrendItem
+        did = self.did("수두")
+        series = {"2024": [1.0] * 20 + [9.0] + [1.0] * 32, "2025": [1.0] * 20 + [8.0] + [1.0] * 32}
+        trend = Trend("pw_x", "테스트 추이", "건", "year", [f"{w}주" for w in range(1, 54)],
+                      {"A형": TrendItem("A형", did, series), "B형": TrendItem("B형", did, series)})
+        stats = type(self.stats)(True, "2026-10-22", "s", "u", self.stats.age_groups, {}, [], {}, {"pw_x": trend})
+        pages = stats_pages(stats, self.by_id)[did]
+        self.assertEqual(len({p["doc_id"] for p in pages}), 2)
+        r = index_public_docs(self.store, self.diseases, type(self.watch)(), stats)
+        self.assertEqual(r["chunks"], 2)
+        self.assertEqual(self.store.docs_count(did), 2)
+
     def test_long_country_list_split_with_header(self):
         from service.countries import CountryWatch, WatchData
         did = self.did("황열")

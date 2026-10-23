@@ -242,11 +242,12 @@ class BuildIndexScriptTest(unittest.TestCase):
     def test_script_twice_same_count(self):
         from scripts import build_index
         tmp = Path(tempfile.mkdtemp())
-        saved = {k: getattr(paths, k) for k in ("WIKI_TITLES", "WIKI_PAGES", "QUERY_CACHE", "load_rag_settings")}
+        saved = {k: getattr(paths, k) for k in ("WIKI_TITLES", "WIKI_PAGES", "QUERY_CACHE", "load_rag_settings", "PROCESSED")}
         orig_load = paths.load_rag_settings
         try:
             paths.WIKI_TITLES = tmp / "titles.json"
             paths.WIKI_PAGES, paths.QUERY_CACHE = tmp / "pages", tmp / "cache.json"
+            paths.PROCESSED = tmp / "processed"     # 실제 수집 결과(검역·통계)와 섞이지 않게
             paths.load_rag_settings = lambda **kw: {**orig_load(**kw), "chroma_dir": str(tmp / "chroma")}
             emb, (wiki, server) = DeterministicFakeEmbedding(size=32), fake_wiki_client()
             self.assertEqual(build_index.main(["--prefetch-docs"], embeddings=emb, wiki_client=wiki), 0)

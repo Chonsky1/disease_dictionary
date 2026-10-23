@@ -150,6 +150,7 @@ class DiseaseStore:
                 self.docs._collection.delete(ids=old["ids"])
             new_docs += chunks
             written += 1
+        new_docs = list({c.id: c for c in new_docs}.values())   # 같은 청크 ID가 두 번 오면 나중 것 (Chroma는 중복 ID를 거부)
         for s in range(0, len(new_docs), BATCH):
             part = new_docs[s:s + BATCH]
             self.docs.add_documents(part, ids=[c.id for c in part])
