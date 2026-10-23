@@ -1,0 +1,9 @@
+# 21_NF2003_NF2004_키검사
+# 2026-10-23 10:35:54 · 실제 실행
+
+$ python -m scripts.scan_secrets C:\Users\SSAFY\Desktop\disease\kdca-rag-stage1\kdca-rag\submission
+(소요 0.2s, 종료 코드 0)
+[1] .gitignore에 .env: 있음 · git에 .env 포함: 아니오
+[2] .env의 키 변수 2개 (OPENAI_API_KEY, DATA_GO_KR_SERVICE_KEY) 값을 161개 파일에서 검색
+[3] 키 모양 검사: 텍스트 파일 127개
+[결과] 키 값·키 모양 문자열 없음 (값은 출력하지 않음)

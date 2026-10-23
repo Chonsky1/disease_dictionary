@@ -1,0 +1,41 @@
+# 23_NF2006_재시도_간격_UserAgent
+# 2026-10-23 10:35:51 · 실제 실행
+
+[data_prep/wiki.py]
+  data_prep/wiki.py:13: 예절 (NF2006): 연락처가 든 User-Agent 필수, 요청은 한 번에 하나씩 + 최소 간격, maxlag=5,
+  data_prep/wiki.py:66: def __init__(self, user_agent: str, min_interval: float = 0.5, max_retries: int = 3,
+  data_prep/wiki.py:68: if not user_agent or "@" not in user_agent and "contact" not in user_agent.lower():
+  data_prep/wiki.py:74: user_agent=user_agent, language=LANG, extract_format=wikipediaapi.ExtractFormat.WIKI,
+  data_prep/wiki.py:75: max_retries=max_retries, retry_wait=retry_wait, extra_api_params={"maxlag": 5}, **kwargs)
+  data_prep/wiki.py:76: self.min_interval = min_interval
+  data_prep/wiki.py:83: wait = self.min_interval - (time.monotonic() - self._last)
+[data_prep/http_client.py]
+  data_prep/http_client.py:1: """외부 API 호출 예절 (NF2006): 호출 간격, 재시도, User-Agent, 키 마스킹."""
+  data_prep/http_client.py:13: def mask_secrets(text: str) -> str:
+  data_prep/http_client.py:22: min_interval: float = 1.0,
+  data_prep/http_client.py:23: max_retries: int = 3,
+  data_prep/http_client.py:30: raise ValueError("User-Agent가 필요합니다 (연락처 포함 권장).")
+  data_prep/http_client.py:32: self.session.headers["User-Agent"] = user_agent
+  data_prep/http_client.py:33: self.min_interval = min_interval
+  data_prep/http_client.py:34: self.max_retries = max_retries
+  data_prep/http_client.py:42: if elapsed < self.min_interval:
+  data_prep/http_client.py:43: self._sleep(self.min_interval - elapsed)
+  data_prep/http_client.py:48: for attempt in range(self.max_retries + 1):
+  data_prep/http_client.py:59: f"HTTP {resp.status_code}: {mask_secrets(resp.url)}"
+[config/rag_settings.json]
+  config/rag_settings.json:41: "wiki_min_interval_sec": 0.5,
+  config/rag_settings.json:42: "wiki_max_retries": 3
+[.env.example]
+  .env.example:9: WIKI_USER_AGENT=kdca-rag/0.1 (contact: your-email@example.com)
+
+$ python -m unittest -v tests.test_stage1.WikiClientTest.test_requests_follow_etiquette tests.test_data_prep.HttpTest.test_retry_then_ok tests.test_data_prep.HttpTest.test_4xx_masks_key
+(소요 1.8s, 종료 코드 0)
+
+test_requests_follow_etiquette (tests.test_stage1.WikiClientTest.test_requests_follow_etiquette) ... ok
+test_retry_then_ok (tests.test_data_prep.HttpTest.test_retry_then_ok) ... ok
+test_4xx_masks_key (tests.test_data_prep.HttpTest.test_4xx_masks_key) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.236s
+
+OK

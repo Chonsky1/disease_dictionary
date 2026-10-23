@@ -1,0 +1,100 @@
+[모듈 구성] 폴더 · 역할 · 파일
+
+data_prep/  — 수집 (위키·공공데이터 API·통계 파일, 출처 등록부)
+   data_prep/__init__.py  — 데이터 준비 영역 (NF2005): 도메인에 묶인 코드는 이 패키지에만 둔다.
+   data_prep/age_groups.py  — 데이터셋마다 다른 연령 구간을 서비스 공통 연령대로 맞춘다.
+   data_prep/age_stats.py  — 연령별·시기별 감염병 통계 (단계 2) - 감염병포털에서 내려받은 CSV·xlsx를 읽어 화면용 JSON으로 묶는다.
+   data_prep/collector.py  — 외부 문서 수집과 수집 캐시 (F2004, NF2002).
+   data_prep/csv_loader.py  — 감염병포털·공공데이터포털 CSV를 안전하게 읽는다.
+   data_prep/diseases.py  — 법정감염병 항목 메타데이터 로드와 색인 텍스트 구성 (F2001).
+   data_prep/http_client.py  — 외부 API 호출 예절 (NF2006): 호출 간격, 재시도, User-Agent, 키 마스킹.
+   data_prep/kdca_api.py  — 공공데이터포털(data.go.kr) API 공통 수집기.
+   data_prep/names.py  — 감염병 이름 정규화와 시드 목록과의 조인.
+   data_prep/public_docs.py  — 공공데이터 문서 (F2016 여러 종류의 문서 출처 결합, F2010 특화 기능의 근거).
+   data_prep/quarantine.py  — 검역관리지역 정보 → 나라별 주의 감염병 (country_watch.json) 변환.
+   data_prep/settings.py  — 경로와 환경변수. 키 값은 절대 출력하지 않는다 (NF2003, NF2004).
+   data_prep/sources.py  — 출처 등록부(config/sources.json)에서 화면 캡션용 이용 조건 문구를 만든다 (NF2007).
+   data_prep/wiki.py  — 한국어 위키백과 클라이언트 — Wikipedia-API(wikipediaapi) 라이브러리 기반.
+   data_prep/wiki_titles.py  — 감염병마다 '항목 자체를 다룬 위키 문서'의 제목을 정하고 파일로 고정한다.
+   data_prep/xlsx_lite.py  — 아주 작은 xlsx 리더 (표준 라이브러리만 사용).
+
+vectorstore/  — 색인·검색 (Chroma 두 컬렉션)
+   vectorstore/__init__.py  — Vector Store 영역: 컬렉션 생성·조회, 청킹, 임베딩 색인 (NF2005).
+   vectorstore/store.py  — 두 컬렉션을 다루는 Vector Store (F2002, F2005, F2006, F2014).
+
+rag/  — 검색·생성 (LangGraph retrieve→generate, 프롬프트)
+   rag/__init__.py  — RAG 파이프라인 영역: LangGraph 노드, 프롬프트, 근거 번호 (NF2005).
+   rag/answer_cache.py  — 같은 감염병·같은 질문의 답을 저장해 두고 바로 돌려준다 (rag_settings.json의 answer_cache).
+   rag/graph.py  — LangGraph RAG 파이프라인: retrieve → generate 두 노드 (F2003, F2004, F2006~F20
+   rag/llm.py  — 채팅 모델 생성. 키는 환경변수에서만 읽는다 (NF2003).
+   rag/metrics.py  — 답변 한 번에 걸린 시간·호출 수 기록 (화면 표시, scripts/bench_chat.py 측정에 사용).
+   rag/parsing.py  — LLM 출력 파싱: JSON 추출과 근거 번호 해석.
+   rag/prompts.py  — 프롬프트 3종 (+ 조건 탐색용 1종). 역할과 출력 형식을 고정한다 (2.4 프롬프트 설계).
+
+service/  — 도메인 기능 (조건 탐색·여행 안내·통계)
+   service/__init__.py  — 서비스 기능 영역: 조건 기반 항목 탐색, 도메인 특화 기능 (NF2005).
+   service/age.py  — 연령별 알아보기: data/processed/age_stats.json 읽기와 화면용 계산 (Streamlit 없이 테스트 가
+   service/countries.py  — 나라별 주의 감염병 (지도·패널 데이터 계층).
+   service/explore.py  — 조건 기반 항목 탐색 (F2011).
+   service/runtime.py  — 모듈을 엮는 조립 함수. 화면(ui)과 스크립트가 같은 조립을 쓴다.
+   service/travel.py  — 여행 전 안내 (F2010 도메인 특화 기능).
+
+ui/  — 화면 (Streamlit)
+   ui/__init__.py
+   ui/age_view.py  — 연령별 알아보기 차트 (plotly, 다크 테마). 색: 남·여 2색(색각 이상 검증 통과), 유행 시기는 최근 해만 진하게.
+   ui/app.py  — 법정감염병 안내 도우미 - Streamlit 진입점 (페이지 라우터).
+   ui/chat_core.py  — 감염병 질문하기 페이지와 상세보기 페이지가 함께 쓰는 챗봇 부품.
+   ui/common.py  — 페이지들이 함께 쓰는 것: 런타임, 데이터, 페이지 이동, 감염병 검색창.
+   ui/map_view.py  — 지구본 지도 (plotly orthographic, 다크 테마).
+   ui/styles.py  — 화면 스타일 (다크 테마): 목차 바, 홈 인트로, 검색창, 지구본·나라 팝업, 상세보기 인포그래픽, 애니메이션.
+   ui/views/age.py  — 연령별 알아보기 페이지: 연령대별 많이 신고된 감염병 | 감염병별 연령 분포 | 유행 시기 (차트 + 정보 창).
+   ui/views/chat.py  — 감염병 질문하기: 대부분을 대화창이, 오른쪽을 대화 요약이 차지한다.
+   ui/views/detail.py  — 감염병 상세보기: 기본 설명 + 연령·성별 인포그래픽(애니메이션) + 유행 시기 + 지정 국가 + 챗봇에게 물어보기.
+   ui/views/home.py  — 홈: 나라별 주의 감염병 (질병관리청 검역관리지역정보).
+
+scripts/  — 실행 스크립트 (색인·검증·측정)
+   scripts/__init__.py
+   scripts/ask.py  — 화면 없이 질문 하나를 끝까지 돌려 중간 결과를 모두 출력한다 (4.2·4.3 검증용).
+   scripts/bench_chat.py  — 챗봇 답변 시간 측정·비교 → reports/bench_chat.md, reports/bench_chat.json
+   scripts/build_age_stats.py  — 연령별·시기별 통계 묶기 → data/processed/age_stats.json (화면의 '연령별 알아보기'가 읽는 파일).
+   scripts/build_index.py  — 색인 스크립트 (F2001, F2002, F2005).
+   scripts/capture_screens.py  — 체크리스트 화면 증빙 캡처 (Playwright로 Streamlit 앱을 띄워 실제로 조작하고 PNG로 저장).
+   scripts/check_openai.py  — OpenAI(또는 GMS 등 호환 프록시) 연결 점검. 색인·화면 실행 전에 한 번 돌려 본다.
+   scripts/check_seed.py  — 1일차 16시 관문 점검: 시드 항목 메타데이터가 도메인 조건을 만족하는가.
+   scripts/check_wiki_coverage.py  — 시드 감염병마다 한국어 위키백과 문서가 있는지, 길이는 어떤지 확인.
+   scripts/compare_rag.py  — RAG 사용 전후 답변 비교 (F2015, 요구사항 정의서 4.6).
+   scripts/eda_report.py  — data/raw/csv/*.csv 를 모두 프로파일링해 EDA 보고서를 만든다.
+   scripts/explore_check.py  — 조건 기반 탐색 검증 (F2011, 체크리스트 11): 조건을 넣고 결과 항목을 하나씩 데이터와 대조한다.
+   scripts/fetch_api.py  — 공공데이터포털 API 원본 수집 + 응답 필드 목록 작성.
+   scripts/fetch_quarantine.py  — 검역관리지역 정보 수집 → data/processed/country_watch.json (지도 나라 패널이 읽는 파일).
+   scripts/inspect_index.py  — 색인 상태와 그래프 구조 확인 (4.1, 4.3 검증용).
+   scripts/offline_env.py  — 키·네트워크 없이 검증 도구를 돌려 보기 위한 임시 작업 환경 (가짜 모델·가짜 위키·합성 데이터).
+   scripts/scan_secrets.py  — API 키 노출 검사 (NF2003, 체크리스트 21). 키 값은 절대 출력하지 않는다.
+   scripts/travel_check.py  — 도메인 특화 기능 '여행 전 안내' 검증 (F2010, 체크리스트 12).
+   scripts/verify_checklist.py  — 셀프 체크리스트 검증·증빙 자동 생성 (요구사항 정의서 4장, 체크리스트 27항목).
+   scripts/wiki_demo.py  — wikipediaapi 사용 예시 — 프로젝트에서 쓰는 기능을 하나씩 실제로 호출해 본다.
+
+tests/  — 자동 테스트
+   tests/__init__.py
+   tests/age_fixtures.py  — 연령별 통계 테스트용 합성 파일 (감염병포털 내려받기 형식을 흉내 냄. 값은 가짜).
+   tests/fakes.py  — 네트워크·API 키 없이 파이프라인을 끝까지 돌리기 위한 가짜 구성요소.
+   tests/test_age_stats.py  — 단계 2: 연령별·시기별 통계 파싱과 화면용 계산.
+   tests/test_data_prep.py  — data_prep 단위 테스트 (네트워크 없이 실행). 실행: python -m unittest -v
+   tests/test_public_docs.py  — 공공데이터 문서 색인(F2016)과 여행 전 안내(F2010).
+   tests/test_quarantine.py  — 검역관리지역 정보 변환·수집 스크립트 테스트 (합성 픽스처, 네트워크 불필요).
+   tests/test_sources.py  — 출처 등록부와 화면 이용 조건 문구 (NF2007).
+   tests/test_speed.py  — 챗봇 속도 설정과 시간 기록 (rag/graph.py, rag/metrics.py, rag/answer_cache.py), 답
+   tests/test_stage1.py  — 단계 1 RAG 검증 (네트워크·키 불필요). 실행: python -m unittest discover -s tests -t 
+   tests/test_ui.py  — Streamlit 화면 동작 검증 (4.4, F2009·F2011·F2012). streamlit.testing으로 브라우저 
+   tests/test_verify.py  — 검증 도구 (scripts/verify_checklist.py, compare_rag.py, explore_check.py)와
+
+config/  — 설정
+   config/age_groups.json
+   config/age_stats_columns.json
+   config/country_centroids.json
+   config/country_names_ko.json
+   config/country_points.json
+   config/name_aliases.json
+   config/rag_settings.json
+   config/sources.json
+   config/wiki_title_overrides.json

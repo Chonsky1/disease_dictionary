@@ -1,0 +1,32 @@
+# 09_F2007_F2008_없는내용_질문
+# 2026-10-23 10:32:41 · 실제 실행
+
+$ python -m scripts.ask --disease 홍역 --policy when_needed "홍역 치료제 가격은 얼마인가요?"
+(소요 13.4s, 종료 코드 0)
+== 홍역 (제2급) | top_k=5 search=similarity policy=when_needed
+  … 이미 모은 문서로 바로 답합니다
+  … 근거를 검색하는 중
+  … 답변을 생성하는 중
+
+[프롬프트 1] 검색어: []
+
+[근거 목록]
+  [근거 1] 항목 메타데이터 · 홍역  · https://dportal.kdca.go.kr/pot/ii/sttyInftnsds/sttyInftnsds.do
+  [근거 2] 위키백과 · 홍역 / 치료 및 예방 · https://ko.wikipedia.org/wiki/%ED%99%8D%EC%97%AD
+  [근거 3] 위키백과 · 홍역 / 개요 · https://ko.wikipedia.org/wiki/%ED%99%8D%EC%97%AD
+  [근거 4] 위키백과 · 호흡기 비말 / 질병 전파의 역할 > 위험 통제 · https://ko.wikipedia.org/wiki/%ED%98%B8%ED%9D%A1%EA%B8%B0_%EB%B9%84%EB%A7%90
+  [근거 5] 위키백과 · 감염병 / 진단과 치료 · https://ko.wikipedia.org/wiki/%EA%B0%90%EC%97%BC%EB%B3%91
+  [근거 6] 위키백과 · 감염병 / 유아 감염병 · https://ko.wikipedia.org/wiki/%EA%B0%90%EC%97%BC%EB%B3%91
+
+[답변]
+### 핵심 답변
+홍역은 뚜렷한 치료제가 없고 증상 완화와 합병증 예방을 위한 대증 치료를 합니다. 치료제 가격에 관한 정보는 제공된 문서에서 확인되지 않습니다[근거 2, 6].
+
+### 카테고리
+- 치료  
+  - 홍역은 뚜렷한 치료 방법이 없고 증상을 완화하고 합병증을 피하는 대증 치료를 합니다[근거 2].  
+  - 성인의 혈청을 사용하여 가볍게 치료하거나 항균제로 여병을 방지하기도 합니다[근거 6].
+
+[인용된 근거] ['근거 2', '근거 6']
+
+[시간] 9.7초 · 첫 글자 1.8초 · LLM 1회 (근거 검색 0.6 · 답변 8.8)

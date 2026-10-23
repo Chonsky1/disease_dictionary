@@ -1,0 +1,815 @@
+{
+  "offline": false,
+  "tests": {
+    "rows": [
+      [
+        "test_build_all_kinds",
+        "tests.test_age_stats.BuildTest.test_build_all_kinds",
+        "",
+        "ok"
+      ],
+      [
+        "test_script_report_and_empty_dir",
+        "tests.test_age_stats.BuildTest.test_script_report_and_empty_dir",
+        "",
+        "ok"
+      ],
+      [
+        "test_basic_csv_column_count_must_match",
+        "tests.test_age_stats.ParseTest.test_basic_csv_column_count_must_match",
+        "",
+        "ok"
+      ],
+      [
+        "test_kinds",
+        "tests.test_age_stats.ParseTest.test_kinds",
+        "",
+        "ok"
+      ],
+      [
+        "test_numbers_and_weeks",
+        "tests.test_age_stats.ParseTest.test_numbers_and_weeks",
+        "",
+        "ok"
+      ],
+      [
+        "test_xlsx_roundtrip_and_meta",
+        "tests.test_age_stats.ParseTest.test_xlsx_roundtrip_and_meta",
+        "",
+        "ok"
+      ],
+      [
+        "test_missing_file",
+        "tests.test_age_stats.ServiceTest.test_missing_file",
+        "",
+        "ok"
+      ],
+      [
+        "test_profile",
+        "tests.test_age_stats.ServiceTest.test_profile",
+        "",
+        "ok"
+      ],
+      [
+        "test_top_for_age",
+        "tests.test_age_stats.ServiceTest.test_top_for_age",
+        "",
+        "ok"
+      ],
+      [
+        "test_trend_summary",
+        "tests.test_age_stats.ServiceTest.test_trend_summary",
+        "",
+        "ok"
+      ],
+      [
+        "test_is_age_label_rejects_counts",
+        "tests.test_data_prep.AgeTest.test_is_age_label_rejects_counts",
+        "",
+        "ok"
+      ],
+      [
+        "test_map",
+        "tests.test_data_prep.AgeTest.test_map",
+        "",
+        "ok"
+      ],
+      [
+        "test_parse",
+        "tests.test_data_prep.AgeTest.test_parse",
+        "",
+        "ok"
+      ],
+      [
+        "test_errors",
+        "tests.test_data_prep.ApiTest.test_errors",
+        "",
+        "ok"
+      ],
+      [
+        "test_paging",
+        "tests.test_data_prep.ApiTest.test_paging",
+        "",
+        "ok"
+      ],
+      [
+        "test_shapes",
+        "tests.test_data_prep.ApiTest.test_shapes",
+        "",
+        "ok"
+      ],
+      [
+        "test_cp949_with_preamble",
+        "tests.test_data_prep.CsvTest.test_cp949_with_preamble",
+        "",
+        "ok"
+      ],
+      [
+        "test_header_guess_plain",
+        "tests.test_data_prep.CsvTest.test_header_guess_plain",
+        "",
+        "ok"
+      ],
+      [
+        "test_numbers",
+        "tests.test_data_prep.CsvTest.test_numbers",
+        "",
+        "ok"
+      ],
+      [
+        "test_4xx_masks_key",
+        "tests.test_data_prep.HttpTest.test_4xx_masks_key",
+        "",
+        "ok"
+      ],
+      [
+        "test_retry_then_ok",
+        "tests.test_data_prep.HttpTest.test_retry_then_ok",
+        "",
+        "ok"
+      ],
+      [
+        "test_key_and_match",
+        "tests.test_data_prep.NameTest.test_key_and_match",
+        "",
+        "ok"
+      ],
+      [
+        "test_index_record_chunking_idempotent_and_types",
+        "tests.test_public_docs.PublicDocsTest.test_index_record_chunking_idempotent_and_types",
+        "",
+        "ok"
+      ],
+      [
+        "test_long_country_list_split_with_header",
+        "tests.test_public_docs.PublicDocsTest.test_long_country_list_split_with_header",
+        "",
+        "ok"
+      ],
+      [
+        "test_quarantine_record_doc",
+        "tests.test_public_docs.PublicDocsTest.test_quarantine_record_doc",
+        "",
+        "ok"
+      ],
+      [
+        "test_retrieve_ignores_public_docs_for_fast_path",
+        "tests.test_public_docs.PublicDocsTest.test_retrieve_ignores_public_docs_for_fast_path",
+        "공공데이터 문서만 있으면 '이미 모은 위키 문서'가 없는 것으로 보고 항목 문서를 수집한다.",
+        "ok"
+      ],
+      [
+        "test_stats_record_doc",
+        "tests.test_public_docs.PublicDocsTest.test_stats_record_doc",
+        "",
+        "ok"
+      ],
+      [
+        "test_travel_brief_cites_public_api",
+        "tests.test_public_docs.PublicDocsTest.test_travel_brief_cites_public_api",
+        "",
+        "ok"
+      ],
+      [
+        "test_every_code_visible_on_map",
+        "tests.test_quarantine.CountryNameTest.test_every_code_visible_on_map",
+        "모든 ISO-3 코드가 지도 경계에 있거나 점 좌표가 있어야 한다 (안 보이는 나라 없음).",
+        "ok"
+      ],
+      [
+        "test_reported_names_mapped",
+        "tests.test_quarantine.CountryNameTest.test_reported_names_mapped",
+        "",
+        "ok"
+      ],
+      [
+        "test_small_islands_drawn_as_points",
+        "tests.test_quarantine.CountryNameTest.test_small_islands_drawn_as_points",
+        "",
+        "ok"
+      ],
+      [
+        "test_api_mode_params_and_todo",
+        "tests.test_quarantine.FetchScriptTest.test_api_mode_params_and_todo",
+        "",
+        "ok"
+      ],
+      [
+        "test_csv_mode",
+        "tests.test_quarantine.FetchScriptTest.test_csv_mode",
+        "",
+        "ok"
+      ],
+      [
+        "test_http_403_guidance",
+        "tests.test_quarantine.FetchScriptTest.test_http_403_guidance",
+        "",
+        "ok"
+      ],
+      [
+        "test_http_error_shows_body",
+        "tests.test_quarantine.FetchScriptTest.test_http_error_shows_body",
+        "",
+        "ok"
+      ],
+      [
+        "test_raw_mode_rebuilds_without_api",
+        "tests.test_quarantine.FetchScriptTest.test_raw_mode_rebuilds_without_api",
+        "",
+        "ok"
+      ],
+      [
+        "test_resolve_endpoint",
+        "tests.test_quarantine.FetchScriptTest.test_resolve_endpoint",
+        "",
+        "ok"
+      ],
+      [
+        "test_all_icd_names_link_to_disease_list",
+        "tests.test_quarantine.TransformTest.test_all_icd_names_link_to_disease_list",
+        "",
+        "ok"
+      ],
+      [
+        "test_build_watch",
+        "tests.test_quarantine.TransformTest.test_build_watch",
+        "",
+        "ok"
+      ],
+      [
+        "test_csv",
+        "tests.test_quarantine.TransformTest.test_csv",
+        "",
+        "ok"
+      ],
+      [
+        "test_dates_and_active",
+        "tests.test_quarantine.TransformTest.test_dates_and_active",
+        "",
+        "ok"
+      ],
+      [
+        "test_requirements_are_ascii",
+        "tests.test_sources.RequirementsFileTest.test_requirements_are_ascii",
+        "Windows pip은 requirements를 cp949로 읽으므로 한글 주석이 있으면 설치가 깨진다.",
+        "ok"
+      ],
+      [
+        "test_labels",
+        "tests.test_sources.SourcesTest.test_labels",
+        "",
+        "ok"
+      ],
+      [
+        "test_used_sources_have_license",
+        "tests.test_sources.SourcesTest.test_used_sources_have_license",
+        "",
+        "ok"
+      ],
+      [
+        "test_split_sections",
+        "tests.test_speed.AnswerFormatTest.test_split_sections",
+        "",
+        "ok"
+      ],
+      [
+        "test_polite_tone_and_cache_version",
+        "tests.test_speed.AnswerToneTest.test_polite_tone_and_cache_version",
+        "",
+        "ok"
+      ],
+      [
+        "test_summary_and_describe",
+        "tests.test_speed.MeterTest.test_summary_and_describe",
+        "",
+        "ok"
+      ],
+      [
+        "test_quota_detection",
+        "tests.test_speed.QuotaTest.test_quota_detection",
+        "",
+        "ok"
+      ],
+      [
+        "test_always_collects_every_time",
+        "tests.test_speed.SpeedTest.test_always_collects_every_time",
+        "",
+        "ok"
+      ],
+      [
+        "test_answer_cache",
+        "tests.test_speed.SpeedTest.test_answer_cache",
+        "",
+        "ok"
+      ],
+      [
+        "test_aux_model_used_for_helpers",
+        "tests.test_speed.SpeedTest.test_aux_model_used_for_helpers",
+        "",
+        "ok"
+      ],
+      [
+        "test_background_cold_uses_item_doc_only",
+        "tests.test_speed.SpeedTest.test_background_cold_uses_item_doc_only",
+        "처음 묻는 감염병: 항목 자체 문서만 바로 색인(LLM 없음) → 답변 LLM 1회, 추가 수집은 배경.",
+        "ok"
+      ],
+      [
+        "test_background_collects_after_answer",
+        "tests.test_speed.SpeedTest.test_background_collects_after_answer",
+        "",
+        "ok"
+      ],
+      [
+        "test_background_report_shown_next_answer",
+        "tests.test_speed.SpeedTest.test_background_report_shown_next_answer",
+        "배경 수집 결과(프롬프트 1 검색어·새로 색인한 문서)를 다음 답변 진행 상태에 보여 준다 (F2003·F2004·F2012).",
+        "ok"
+      ],
+      [
+        "test_describe_background_error",
+        "tests.test_speed.SpeedTest.test_describe_background_error",
+        "",
+        "ok"
+      ],
+      [
+        "test_parallel_same_result_as_sequential",
+        "tests.test_speed.SpeedTest.test_parallel_same_result_as_sequential",
+        "",
+        "ok"
+      ],
+      [
+        "test_stream_tokens_and_first_token",
+        "tests.test_speed.SpeedTest.test_stream_tokens_and_first_token",
+        "",
+        "ok"
+      ],
+      [
+        "test_when_needed_skips_collection",
+        "tests.test_speed.SpeedTest.test_when_needed_skips_collection",
+        "",
+        "ok"
+      ],
+      [
+        "test_warmup_embeds_once_in_background",
+        "tests.test_speed.WarmupTest.test_warmup_embeds_once_in_background",
+        "",
+        "ok"
+      ],
+      [
+        "test_script_twice_same_count",
+        "tests.test_stage1.BuildIndexScriptTest.test_script_twice_same_count",
+        "",
+        "ERROR"
+      ],
+      [
+        "test_index_text_has_all_attributes",
+        "tests.test_stage1.DiseaseLoadTest.test_index_text_has_all_attributes",
+        "",
+        "ok"
+      ],
+      [
+        "test_load_133",
+        "tests.test_stage1.DiseaseLoadTest.test_load_133",
+        "",
+        "ok"
+      ],
+      [
+        "test_proxy_sends_raw_text",
+        "tests.test_stage1.EmbeddingConfigTest.test_proxy_sends_raw_text",
+        "",
+        "ok"
+      ],
+      [
+        "test_grade_filter",
+        "tests.test_stage1.ParsingTest.test_grade_filter",
+        "",
+        "ok"
+      ],
+      [
+        "test_json_and_citations",
+        "tests.test_stage1.ParsingTest.test_json_and_citations",
+        "",
+        "ok"
+      ],
+      [
+        "test_chunk_settings_change_count",
+        "tests.test_stage1.PipelineTest.test_chunk_settings_change_count",
+        "",
+        "ok"
+      ],
+      [
+        "test_condition_search_drops_unknown_ids",
+        "tests.test_stage1.PipelineTest.test_condition_search_drops_unknown_ids",
+        "",
+        "ok"
+      ],
+      [
+        "test_docs_scoped_to_disease_and_ids",
+        "tests.test_stage1.PipelineTest.test_docs_scoped_to_disease_and_ids",
+        "",
+        "ok"
+      ],
+      [
+        "test_end_to_end_and_cache",
+        "tests.test_stage1.PipelineTest.test_end_to_end_and_cache",
+        "",
+        "ok"
+      ],
+      [
+        "test_evidence_dedupe_by_text",
+        "tests.test_stage1.PipelineTest.test_evidence_dedupe_by_text",
+        "",
+        "ok"
+      ],
+      [
+        "test_graph_has_two_nodes",
+        "tests.test_stage1.PipelineTest.test_graph_has_two_nodes",
+        "",
+        "ok"
+      ],
+      [
+        "test_meta_index_idempotent",
+        "tests.test_stage1.PipelineTest.test_meta_index_idempotent",
+        "",
+        "ok"
+      ],
+      [
+        "test_no_citation",
+        "tests.test_stage1.PipelineTest.test_no_citation",
+        "",
+        "ok"
+      ],
+      [
+        "test_resolve_titles",
+        "tests.test_stage1.PipelineTest.test_resolve_titles",
+        "",
+        "ok"
+      ],
+      [
+        "test_topk_and_mmr",
+        "tests.test_stage1.PipelineTest.test_topk_and_mmr",
+        "",
+        "ok"
+      ],
+      [
+        "test_fetch_page_sections",
+        "tests.test_stage1.WikiClientTest.test_fetch_page_sections",
+        "",
+        "ok"
+      ],
+      [
+        "test_requests_follow_etiquette",
+        "tests.test_stage1.WikiClientTest.test_requests_follow_etiquette",
+        "",
+        "ok"
+      ],
+      [
+        "test_resolve_redirect_and_missing",
+        "tests.test_stage1.WikiClientTest.test_resolve_redirect_and_missing",
+        "",
+        "ok"
+      ],
+      [
+        "test_search_candidates",
+        "tests.test_stage1.WikiClientTest.test_search_candidates",
+        "",
+        "ok"
+      ],
+      [
+        "test_country_from_event",
+        "tests.test_ui.MapEventTest.test_country_from_event",
+        "",
+        "ok"
+      ],
+      [
+        "test_country_names",
+        "tests.test_ui.MapEventTest.test_country_names",
+        "",
+        "ok"
+      ],
+      [
+        "test_map_figure",
+        "tests.test_ui.MapEventTest.test_map_figure",
+        "",
+        "ok"
+      ],
+      [
+        "test_cases_from_data",
+        "tests.test_verify.CompareRagTest.test_cases_from_data",
+        "",
+        "ok"
+      ],
+      [
+        "test_judge",
+        "tests.test_verify.CompareRagTest.test_judge",
+        "",
+        "ok"
+      ],
+      [
+        "test_post_filter_drops_mismatch",
+        "tests.test_verify.ExploreRuleTest.test_post_filter_drops_mismatch",
+        "",
+        "ok"
+      ],
+      [
+        "test_structured_conditions",
+        "tests.test_verify.ExploreRuleTest.test_structured_conditions",
+        "",
+        "ok"
+      ],
+      [
+        "test_counts",
+        "tests.test_verify.VerifyToolTest.test_counts",
+        "",
+        "ok"
+      ],
+      [
+        "test_parse_ask",
+        "tests.test_verify.VerifyToolTest.test_parse_ask",
+        "",
+        "ok"
+      ]
+    ],
+    "ok": false,
+    "total": 106,
+    "sec": 48.3,
+    "tail": "ase\\kdca-rag-stage1\\kdca-rag\\venv\\Lib\\site-packages\\langchain_chroma\\vectorstores.py\", line 651, in add_texts\n    self._collection.upsert(\n  File \"C:\\Users\\SSAFY\\Desktop\\disease\\kdca-rag-stage1\\kdca-rag\\venv\\Lib\\site-packages\\chromadb\\api\\models\\Collection.py\", line 521, in upsert\n    upsert_request = self._validate_and_prepare_upsert_request(\n                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\SSAFY\\Desktop\\disease\\kdca-rag-stage1\\kdca-rag\\venv\\Lib\\site-packages\\chromadb\\api\\models\\CollectionCommon.py\", line 103, in wrapper\n    return func(self, *args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\SSAFY\\Desktop\\disease\\kdca-rag-stage1\\kdca-rag\\venv\\Lib\\site-packages\\chromadb\\api\\models\\CollectionCommon.py\", line 441, in _validate_and_prepare_upsert_request\n    validate_insert_record_set(record_set=upsert_records)\n  File \"C:\\Users\\SSAFY\\Desktop\\disease\\kdca-rag-stage1\\kdca-rag\\venv\\Lib\\site-packages\\chromadb\\api\\types.py\", line 445, in validate_insert_record_set\n    validate_ids(record_set[\"ids\"])\n  File \"C:\\Users\\SSAFY\\Desktop\\disease\\kdca-rag-stage1\\kdca-rag\\venv\\Lib\\site-packages\\chromadb\\api\\types.py\", line 1039, in validate_ids\n    raise errors.DuplicateIDError(message)\nchromadb.errors.DuplicateIDError: Expected IDs to be unique, found duplicates of: inf_0133:kdca-trend-pw_엔테로바이러스감염증-inf_0133:0000 in upsert.\n\n----------------------------------------------------------------------\nRan 106 tests in 45.774s\n\nFAILED (errors=1)\n"
+  },
+  "results": {
+    "1": {
+      "no": 1,
+      "req": "F2001",
+      "status": "통과",
+      "files": [
+        "01_F2001_로드건수_색인건수_색인텍스트.png",
+        "01_F2001_로드건수_색인건수_색인텍스트.txt"
+      ],
+      "note": "로드 133건 = 메타 컬렉션 133건, 색인 텍스트에 급수, 신고 시기, 신고 범위, KCD 코드, 담당부서 포함"
+    },
+    "2": {
+      "no": 2,
+      "req": "F2002",
+      "status": "통과",
+      "files": [
+        "02_F2002_두번실행_청크수.png",
+        "02_F2002_두번실행_청크수.txt"
+      ],
+      "note": "1회 후 메타 133·문서 1874청크 → 2회 후 메타 133·문서 1874청크 (변화 없음)"
+    },
+    "3": {
+      "no": 3,
+      "req": "F2003 · F2004",
+      "status": "통과",
+      "files": [
+        "03_F2003_F2004_검색어_선별결과.png",
+        "03_F2003_F2004_검색어_선별결과.txt"
+      ],
+      "note": "검색어 ['브루셀라증 전파 경로', '브루셀라증 감염 경로', '브루셀라증 인수공통감염병'] · 검색어별 색인 문서/버린 문서를 나란히 출력 (색인 3줄, 버림 3줄)"
+    },
+    "4": {
+      "no": 4,
+      "req": "F2004 · NF2002",
+      "status": "통과",
+      "files": [
+        "04_F2004_NF2002_재질문_수집로그.png",
+        "04_F2004_NF2002_재질문_수집로그.txt"
+      ],
+      "note": "2회째 모든 검색어가 '캐시'(위키 검색·선별 호출 없음), 시간 13.9s → 3.9s"
+    },
+    "5": {
+      "no": 5,
+      "req": "F2005",
+      "status": "통과",
+      "files": [
+        "05_F2005_청크설정_재색인.png",
+        "05_F2005_청크설정_재색인.txt"
+      ],
+      "note": "chunk 500/100 → 2613청크, 1000/200 → 1860청크 (원래 설정으로 복구)"
+    },
+    "6": {
+      "no": 6,
+      "req": "F2006",
+      "status": "통과",
+      "files": [
+        "06_F2006_TopK_근거목록비교.png",
+        "06_F2006_TopK_근거목록비교.txt"
+      ],
+      "note": "같은 질문에서 top_k 3 → 근거 4개(메타 1 + 문서), 8 → 9개"
+    },
+    "7": {
+      "no": 7,
+      "req": "F2007",
+      "status": "통과",
+      "files": [
+        "07_F2007_LangGraph_구조.png",
+        "07_F2007_LangGraph_구조.txt"
+      ],
+      "note": "START → retrieve → generate → END 두 노드 (Mermaid 출력 + 코드)"
+    },
+    "8": {
+      "no": 8,
+      "req": "F2008",
+      "status": "통과",
+      "files": [
+        "08_F2008_근거번호_근거목록.png",
+        "08_F2008_근거번호_근거목록.txt",
+        "S08_답변_근거목록.png"
+      ],
+      "note": "답변 근거 번호 [2, 4]가 모두 목록에 있음, 항목 메타데이터와 외부 문서(공공 통계, 위키백과) 구분 표시"
+    },
+    "9": {
+      "no": 9,
+      "req": "F2007 · F2008",
+      "status": "통과",
+      "files": [
+        "09_F2007_F2008_없는내용_질문.png",
+        "09_F2007_F2008_없는내용_질문.txt",
+        "S09_없는내용_질문.png"
+      ],
+      "note": "'제공된 문서에서 확인되지 않습니다'로 답함 · 일부 근거(급수 등)를 인용"
+    },
+    "10": {
+      "no": 10,
+      "req": "F2009",
+      "status": "통과",
+      "files": [
+        "S10a_대화분리_수두.png",
+        "S10b_대화분리_홍역복귀.png"
+      ],
+      "note": "홍역 대화 후 수두 질문 → 수두 대화만, 요약의 '홍역' 버튼 → 홍역 대화만 (섞이지 않음)"
+    },
+    "11": {
+      "no": 11,
+      "req": "F2011",
+      "status": "통과",
+      "files": [
+        "11_F2011_조건탐색_결과대조.png",
+        "11_F2011_조건탐색_결과대조.txt"
+      ],
+      "note": "조건 4개 · 결과 16건을 급수·신고 범위 데이터와 하나씩 대조해 어긋난 항목 0건 (데이터에 없는 조건 '모기·호흡기'는 결과의 이유를 사람이 확인)"
+    },
+    "12": {
+      "no": 12,
+      "req": "F2010",
+      "status": "통과",
+      "files": [
+        "12_F2010_여행전안내_근거.png",
+        "12_F2010_여행전안내_근거.txt",
+        "S12_여행전안내_근거.png"
+      ],
+      "note": "여행 전 안내(나라 팝업): 검역관리지역 API 문서·항목 메타데이터·위키 청크를 근거로 [근거 n] 표시"
+    },
+    "13": {
+      "no": 13,
+      "req": "F2012",
+      "status": "통과",
+      "files": [
+        "S13a_진행상태_처리중.png",
+        "S13b_진행상태_완료기록.png",
+        "S13c_색인없음_안내.png",
+        "S13d_키없음_안내.png"
+      ],
+      "note": "처리 중 진행 상태·완료 후 수집 문서 제목, 색인 없음 안내(build_index), 키 없음 안내(변수 이름만)"
+    },
+    "14": {
+      "no": 14,
+      "req": "F2012",
+      "status": "통과",
+      "files": [
+        "S14_면책안내.png"
+      ],
+      "note": "건강 도메인: 답변 화면·홈에 면책 안내 표시 (\"이 서비스는 공개된 공공자료와 백과사전을 근거로 한 일반 정보이며, 의사…\")"
+    },
+    "15": {
+      "no": 15,
+      "req": "F2013",
+      "status": "해당없음",
+      "files": [],
+      "note": "심화 F2013(HTML·CSS·JS 프론트엔드)은 선택하지 않음 — 화면은 Streamlit으로 구현"
+    },
+    "16": {
+      "no": 16,
+      "req": "F2014",
+      "status": "통과",
+      "files": [
+        "16_F2014_유사도_MMR_비교.png",
+        "16_F2014_유사도_MMR_비교.txt"
+      ],
+      "note": "두 방식 근거 목록 나란히 비교: 서로 다른 근거 2/2개, 문서 다양성 2→3"
+    },
+    "17": {
+      "no": 17,
+      "req": "F2015",
+      "status": "통과",
+      "files": [
+        "17_F2015_RAG전후비교_실행.png",
+        "17_F2015_RAG_COMPARISON.md",
+        "17_F2015_RAG전후비교_실행.txt"
+      ],
+      "note": "대표 질문 9개 · 사실 정확성 RAG 없이 3/9 → RAG 8/9 · 근거 제시 0 → 9 · 모름 표명 비교 포함"
+    },
+    "18": {
+      "no": 18,
+      "req": "F2015",
+      "status": "통과",
+      "files": [
+        "docs/RAG_COMPARISON.md"
+      ],
+      "note": "비교 결과 문서를 docs/RAG_COMPARISON.md로 제출물에 포함"
+    },
+    "19": {
+      "no": 19,
+      "req": "F2016",
+      "status": "통과",
+      "files": [
+        "19_F2016_출처종류_색인과_근거표시.png",
+        "19_F2016_출처종류_색인과_근거표시.txt",
+        "S19_근거_출처종류.png",
+        "S12_여행전안내_근거.png"
+      ],
+      "note": "disease_docs에 출처 종류 ['wiki', 'public_stats', 'public_api'] 함께 색인(위키=글자 수 청킹, 공공데이터=레코드 청킹), 근거 목록에 종류 배지"
+    },
+    "20": {
+      "no": 20,
+      "req": "NF2001",
+      "status": "통과",
+      "files": [
+        "20_NF2001_처리시간_첫질문_두번째.png",
+        "20_NF2001_처리시간_첫질문_두번째.txt"
+      ],
+      "note": "첫 질문 6.0s(문서 수집 포함), 두 번째 2.8s · 답변은 스트리밍이라 첫 글자는 더 빨리 보임 (기준: 첫 20s·이후 10s 이내) · 상세 측정 docs/PERFORMANCE.md"
+    },
+    "21": {
+      "no": 21,
+      "req": "NF2003 · NF2004",
+      "status": "통과",
+      "files": [
+        "21_NF2003_NF2004_키검사.png",
+        "21_NF2003_NF2004_키검사.txt",
+        "S21_오류화면_노출없음.png",
+        "S13d_키없음_안내.png"
+      ],
+      "note": "저장소·제출 폴더에 키 값·키 모양 없음, .env는 .gitignore, 오류 화면(틀린 키)·키 없음 화면에 키·프롬프트·추적 정보 없음"
+    },
+    "22": {
+      "no": 22,
+      "req": "NF2005",
+      "status": "통과",
+      "files": [
+        "22_NF2005_모듈구성.png",
+        "22_NF2005_모듈구성.txt"
+      ],
+      "note": "수집 data_prep · 색인/검색 vectorstore · 생성 rag · 도메인 service · UI ui 로 분리"
+    },
+    "23": {
+      "no": 23,
+      "req": "NF2006",
+      "status": "통과",
+      "files": [
+        "23_NF2006_재시도_간격_UserAgent.png",
+        "23_NF2006_재시도_간격_UserAgent.txt"
+      ],
+      "note": "위키: 요청 간 최소 0.5s·재시도 3회·maxlag=5·연락처 든 User-Agent 필수 / 공공데이터 API: 간격·재시도·키 마스킹 (코드+테스트)"
+    },
+    "24": {
+      "no": 24,
+      "req": "NF2007",
+      "status": "통과",
+      "files": [
+        "24_NF2007_출처_이용조건.png",
+        "24_NF2007_출처_이용조건.txt"
+      ],
+      "note": "README 6절 표 + config/sources.json(이용 조건·확인일), 화면 캡션에 출처·이용 조건"
+    },
+    "25": {
+      "no": 25,
+      "req": "필수",
+      "status": "통과",
+      "files": [
+        "검증결과/검증_요약.md",
+        "17_F2015_RAG_COMPARISON.md"
+      ],
+      "note": "1~14 모두 통과, 심화 F2014·F2015·F2016을 필수 결과(유사도 검색·RAG 없는 답·위키 단일 출처)와 비교"
+    },
+    "26": {
+      "no": 26,
+      "req": "필수",
+      "status": "통과",
+      "files": [
+        "evidence/"
+      ],
+      "note": "화면 캡처 11/11개 + 실행 출력 캡처(NN_*.png) 저장"
+    },
+    "27": {
+      "no": 27,
+      "req": "필수",
+      "status": "미확인",
+      "files": [
+        "요구사항_대조표.md",
+        "테스트_결과표.md"
+      ],
+      "note": "요구사항 정의서·설계문서·소스·README·대조표·테스트 결과표·셀프 체크리스트 포함 / 상호 체크리스트는 옆 교육생 점검 후 submission/에 추가해야 함"
+    }
+  }
+}

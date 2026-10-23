@@ -1,0 +1,88 @@
+[
+  {
+    "id": "S13a",
+    "file": "S13a_진행상태_처리중.png",
+    "ok": true,
+    "note": "처리 중 상태 영역 캡처",
+    "checks": {}
+  },
+  {
+    "id": "S13b",
+    "file": "S13b_진행상태_완료기록.png",
+    "ok": true,
+    "note": "완료 후 진행 기록(수집·색인 문서 제목)",
+    "checks": {}
+  },
+  {
+    "id": "S08",
+    "file": "S08_답변_근거목록.png",
+    "ok": true,
+    "note": "답변의 [근거 n]과 펼친 근거 목록(출처 종류 배지)",
+    "checks": {
+      "answer_numbers": []
+    }
+  },
+  {
+    "id": "S09",
+    "file": "S09_없는내용_질문.png",
+    "ok": true,
+    "note": "'확인되지 않습니다' 답변 O · 근거 없음 안내 (인용 근거가 있어 안내 대신 근거 표시)",
+    "checks": {}
+  },
+  {
+    "id": "S10a",
+    "file": "S10a_대화분리_수두.png",
+    "ok": true,
+    "note": "수두로 바꾸면 수두 대화만 보임",
+    "checks": {}
+  },
+  {
+    "id": "S10b",
+    "file": "S10b_대화분리_홍역복귀.png",
+    "ok": true,
+    "note": "홍역으로 돌아오면 홍역 대화만 그대로",
+    "checks": {}
+  },
+  {
+    "id": "S14",
+    "file": "S14_면책안내.png",
+    "ok": true,
+    "note": "답변 화면 아래 면책 안내",
+    "checks": {}
+  },
+  {
+    "id": "S12",
+    "file": "S12_여행전안내_근거.png",
+    "ok": true,
+    "note": "나라 BGD: 안내 본문 [근거 n] + 근거 목록(공공데이터 API·메타데이터)",
+    "checks": {}
+  },
+  {
+    "id": "S19",
+    "file": "S19_근거_출처종류.png",
+    "ok": true,
+    "note": "근거 목록의 출처 종류 배지: 항목 메타데이터, 위키백과, 공공데이터 API",
+    "checks": {}
+  },
+  {
+    "id": "S13c",
+    "file": "S13c_색인없음_안내.png",
+    "ok": true,
+    "note": "색인 폴더가 빈 상태로 실행 → build_index 안내",
+    "checks": {}
+  },
+  {
+    "id": "S13d",
+    "file": "S13d_키없음_안내.png",
+    "ok": true,
+    "note": "OPENAI_API_KEY를 비우고 실행 → 변수 이름만 안내 (값 노출 없음)",
+    "checks": {}
+  },
+  {
+    "id": "S21",
+    "file": "S21_오류화면_노출없음.png",
+    "ok": true,
+    "note": "오류 안내만 표시, 키·프롬프트·추적 정보 없음",
+    "checks": {}
+  }
+]

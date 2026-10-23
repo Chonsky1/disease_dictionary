@@ -1,0 +1,183 @@
+# 02_F2002_두번실행_청크수
+# 2026-10-23 10:50:34 · 실제 실행
+
+$ python -m scripts.inspect_index --disease 홍역
+(소요 1.9s, 종료 코드 0)
+로드한 항목 133건 / disease_meta 청크 133건 / disease_docs 청크 1874건
+disease_docs 출처 종류별 청크: {'wiki': 1760, 'public_api': 20, 'public_stats': 94} (wiki=위키백과, public_api=검역관리지역 API, public_stats=감염병포털 통계)
+
+[inf_0021] 색인 텍스트:
+[법정감염병] 홍역
+급수: 제2급 감염병 (전수감시)
+급수 기준: 전파가능성을 고려하여 발생 또는 유행 시 24시간 이내에 신고하여야 하고 격리가 필요한 감염병
+신고 시기: 24시간 이내
+신고 범위: 환자 포함, 의사환자 포함, 병원체보유자 제외
+KCD 코드: B05.0~B05.9, B05
+질병관리청 담당부서: 감염병관리과
+개요(위키백과 요약): 홍역(紅疫, 영어: measles)은 파라믹소바이러스(paramixovirus)과에 속하는 홍역 바이러스가 일으키는 전염성이 매우 높은 질환이다. 한방에서는 홍진(紅疹)으로 부른다. 면역률이 높아 한번 감염되거나 백신을 맞으면 다시 감염될 확률이 희박하기 때문에 주로 면역되지 않은 학령기 이전 소아에 호발한다. 비말 등을 통해 호흡기로 감염되는데, 동물 전파 매개체가 없고, 오직 사람끼리만 감염된다.
+
+이 감염병으로 색인된 문서: [{'title': '감염병', 'url': 'https://ko.wikipedia.org/wiki/%EA%B0%90%EC%97%BC%EB%B3%91', 'chunks': 12, 'source_type': 'wiki', 'source_label': '위키백과'}, {'title': '호흡기 비말', 'url': 'https://ko.wikipedia.org/wiki/%ED%98%B8%ED%9D%A1%EA%B8%B0_%EB%B9%84%EB%A7%90', 'chunks': 5, 'source_type': 'wiki', 'source_label': '위키백과'}, {'title': '감염 경로', 'url': 'https://ko.wikipedia.org/wiki/%EA%B0%90%EC%97%BC_%EA%B2%BD%EB%A1%9C', 'chunks': 13, 'source_type': 'wiki', 'source_label': '위키백과'}, {'title': '홍역', 'url': 'https://ko.wikipedia.org/wiki/%ED%99%8D%EC%97%AD', 'chunks': 3, 'source_type': 'wiki', 'source_label': '위키백과'}, {'title': '홍역 검역관리지역 지정 국가', 'url': 'https://www.data.go.kr/data/15139251/openapi.do', 'chunks': 3, 'source_type': 'public_api', 'source_label': '공공데이터 API · 검역관리지역'}, {'title': '홍역 연령·성별 신고 현황', 'url': 'https://dportal.kdca.go.kr/pot/is/summary.do', 'chunks': 1, 'source_type': 'public_stats', 'source_label': '공공 통계 · 감염병포털'}]
+
+[LangGraph 구조]
+---
+config:
+  flowchart:
+    curve: linear
+---
+graph TD;
+	__start__([<p>__start__</p>]):::first
+	retrieve(retrieve)
+	generate(generate)
+	__end__([<p>__end__</p>]):::last
+	__start__ --> retrieve;
+	retrieve --> generate;
+	generate --> __end__;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc
+
+$ python -m scripts.build_index
+(소요 273.1s, 종료 코드 0)
+[load] 감염병 133건 로드: 1급 18건, 2급 22건, 3급 32건, 4급 61건
+[wiki] 항목별 위키백과 문서 제목 해석 (page.exists → 없으면 search)
+  제목 10/133 (보툴리눔독소증)
+  제목 20/133 (수두)
+  제목 30/133 (폴리오)
+  제목 40/133 (풍진(후천성))
+  제목 50/133 (쯔쯔가무시증)
+  제목 60/133 (웨스트나일열)
+  제목 70/133 (매독(3기))
+  제목 80/133 (수족구병)
+  제목 90/133 (다제내성아시네토박터바우마니균(MRAB) 감염증)
+  제목 100/133 (바실루스 세레우스균 감염증)
+  제목 110/133 (작은와포자충 감염증)
+  제목 120/133 (클라미디아균 감염증)
+  제목 130/133 (포충증)
+  제목 133/133 (엔테로바이러스 감염증)
+[wiki] 제목 해석 결과: {'redirect': 29, 'exact': 58, 'search': 37, 'not_found': 9} → search/not_found 항목은 wiki_titles.json에서 확인
+[wiki] 항목 문서 본문 수집 (page.text, 이미 받은 문서는 건너뜀)
+  본문 10/124 (보툴리눔독소증)
+  본문 20/124 (수두)
+  본문 30/124 (폴리오)
+  본문 40/124 (풍진(후천성))
+  본문 50/124 (쯔쯔가무시증)
+  본문 60/124 (웨스트나일열)
+  본문 70/124 (매독(3기))
+  본문 80/124 (수족구병)
+  본문 90/124 (다제내성아시네토박터바우마니균(MRAB) 감염증)
+  본문 100/124 (사포바이러스 감염증)
+  본문 110/124 (사람 코로나바이러스 감염증)
+  본문 120/124 (사상충증)
+  본문 124/124 (엔테로바이러스 감염증)
+[index] disease_meta: 133건 → 133건 (로드 133건과 일치: True, 위키 요약 포함 124건)
+[index] 공공데이터 문서 116건 → 청크 121개 (레코드 = 청크, 종류별 문서 {'public_api': 15, 'public_stats': 101})
+[index] disease_docs 출처 종류별 청크: {'wiki': 1760, 'public_api': 20, 'public_stats': 94}
+
+$ python -m scripts.inspect_index --disease 홍역
+(소요 2.0s, 종료 코드 0)
+로드한 항목 133건 / disease_meta 청크 133건 / disease_docs 청크 1874건
+disease_docs 출처 종류별 청크: {'wiki': 1760, 'public_api': 20, 'public_stats': 94} (wiki=위키백과, public_api=검역관리지역 API, public_stats=감염병포털 통계)
+
+[inf_0021] 색인 텍스트:
+[법정감염병] 홍역
+급수: 제2급 감염병 (전수감시)
+급수 기준: 전파가능성을 고려하여 발생 또는 유행 시 24시간 이내에 신고하여야 하고 격리가 필요한 감염병
+신고 시기: 24시간 이내
+신고 범위: 환자 포함, 의사환자 포함, 병원체보유자 제외
+KCD 코드: B05.0~B05.9, B05
+질병관리청 담당부서: 감염병관리과
+개요(위키백과 요약): 홍역(紅疫, 영어: measles)은 파라믹소바이러스(paramixovirus)과에 속하는 홍역 바이러스가 일으키는 전염성이 매우 높은 질환이다. 한방에서는 홍진(紅疹)으로 부른다. 면역률이 높아 한번 감염되거나 백신을 맞으면 다시 감염될 확률이 희박하기 때문에 주로 면역되지 않은 학령기 이전 소아에 호발한다. 비말 등을 통해 호흡기로 감염되는데, 동물 전파 매개체가 없고, 오직 사람끼리만 감염된다.
+
+이 감염병으로 색인된 문서: [{'title': '감염병', 'url': 'https://ko.wikipedia.org/wiki/%EA%B0%90%EC%97%BC%EB%B3%91', 'chunks': 12, 'source_type': 'wiki', 'source_label': '위키백과'}, {'title': '호흡기 비말', 'url': 'https://ko.wikipedia.org/wiki/%ED%98%B8%ED%9D%A1%EA%B8%B0_%EB%B9%84%EB%A7%90', 'chunks': 5, 'source_type': 'wiki', 'source_label': '위키백과'}, {'title': '감염 경로', 'url': 'https://ko.wikipedia.org/wiki/%EA%B0%90%EC%97%BC_%EA%B2%BD%EB%A1%9C', 'chunks': 13, 'source_type': 'wiki', 'source_label': '위키백과'}, {'title': '홍역', 'url': 'https://ko.wikipedia.org/wiki/%ED%99%8D%EC%97%AD', 'chunks': 3, 'source_type': 'wiki', 'source_label': '위키백과'}, {'title': '홍역 검역관리지역 지정 국가', 'url': 'https://www.data.go.kr/data/15139251/openapi.do', 'chunks': 3, 'source_type': 'public_api', 'source_label': '공공데이터 API · 검역관리지역'}, {'title': '홍역 연령·성별 신고 현황', 'url': 'https://dportal.kdca.go.kr/pot/is/summary.do', 'chunks': 1, 'source_type': 'public_stats', 'source_label': '공공 통계 · 감염병포털'}]
+
+[LangGraph 구조]
+---
+config:
+  flowchart:
+    curve: linear
+---
+graph TD;
+	__start__([<p>__start__</p>]):::first
+	retrieve(retrieve)
+	generate(generate)
+	__end__([<p>__end__</p>]):::last
+	__start__ --> retrieve;
+	retrieve --> generate;
+	generate --> __end__;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc
+
+$ python -m scripts.build_index
+(소요 136.7s, 종료 코드 0)
+[load] 감염병 133건 로드: 1급 18건, 2급 22건, 3급 32건, 4급 61건
+[wiki] 항목별 위키백과 문서 제목 해석 (page.exists → 없으면 search)
+  제목 10/133 (보툴리눔독소증)
+  제목 20/133 (수두)
+  제목 30/133 (폴리오)
+  제목 40/133 (풍진(후천성))
+  제목 50/133 (쯔쯔가무시증)
+  제목 60/133 (웨스트나일열)
+  제목 70/133 (매독(3기))
+  제목 80/133 (수족구병)
+  제목 90/133 (다제내성아시네토박터바우마니균(MRAB) 감염증)
+  제목 100/133 (바실루스 세레우스균 감염증)
+  제목 110/133 (작은와포자충 감염증)
+  제목 120/133 (클라미디아균 감염증)
+  제목 130/133 (포충증)
+  제목 133/133 (엔테로바이러스 감염증)
+[wiki] 제목 해석 결과: {'redirect': 29, 'exact': 58, 'search': 37, 'not_found': 9} → search/not_found 항목은 wiki_titles.json에서 확인
+[wiki] 항목 문서 본문 수집 (page.text, 이미 받은 문서는 건너뜀)
+  본문 10/124 (보툴리눔독소증)
+  본문 20/124 (수두)
+  본문 30/124 (폴리오)
+  본문 40/124 (풍진(후천성))
+  본문 50/124 (쯔쯔가무시증)
+  본문 60/124 (웨스트나일열)
+  본문 70/124 (매독(3기))
+  본문 80/124 (수족구병)
+  본문 90/124 (다제내성아시네토박터바우마니균(MRAB) 감염증)
+  본문 100/124 (사포바이러스 감염증)
+  본문 110/124 (사람 코로나바이러스 감염증)
+  본문 120/124 (사상충증)
+  본문 124/124 (엔테로바이러스 감염증)
+[index] disease_meta: 133건 → 133건 (로드 133건과 일치: True, 위키 요약 포함 124건)
+[index] 공공데이터 문서 116건 → 청크 121개 (레코드 = 청크, 종류별 문서 {'public_api': 15, 'public_stats': 101})
+[index] disease_docs 출처 종류별 청크: {'wiki': 1760, 'public_api': 20, 'public_stats': 94}
+
+$ python -m scripts.inspect_index --disease 홍역
+(소요 1.9s, 종료 코드 0)
+로드한 항목 133건 / disease_meta 청크 133건 / disease_docs 청크 1874건
+disease_docs 출처 종류별 청크: {'wiki': 1760, 'public_api': 20, 'public_stats': 94} (wiki=위키백과, public_api=검역관리지역 API, public_stats=감염병포털 통계)
+
+[inf_0021] 색인 텍스트:
+[법정감염병] 홍역
+급수: 제2급 감염병 (전수감시)
+급수 기준: 전파가능성을 고려하여 발생 또는 유행 시 24시간 이내에 신고하여야 하고 격리가 필요한 감염병
+신고 시기: 24시간 이내
+신고 범위: 환자 포함, 의사환자 포함, 병원체보유자 제외
+KCD 코드: B05.0~B05.9, B05
+질병관리청 담당부서: 감염병관리과
+개요(위키백과 요약): 홍역(紅疫, 영어: measles)은 파라믹소바이러스(paramixovirus)과에 속하는 홍역 바이러스가 일으키는 전염성이 매우 높은 질환이다. 한방에서는 홍진(紅疹)으로 부른다. 면역률이 높아 한번 감염되거나 백신을 맞으면 다시 감염될 확률이 희박하기 때문에 주로 면역되지 않은 학령기 이전 소아에 호발한다. 비말 등을 통해 호흡기로 감염되는데, 동물 전파 매개체가 없고, 오직 사람끼리만 감염된다.
+
+이 감염병으로 색인된 문서: [{'title': '감염병', 'url': 'https://ko.wikipedia.org/wiki/%EA%B0%90%EC%97%BC%EB%B3%91', 'chunks': 12, 'source_type': 'wiki', 'source_label': '위키백과'}, {'title': '호흡기 비말', 'url': 'https://ko.wikipedia.org/wiki/%ED%98%B8%ED%9D%A1%EA%B8%B0_%EB%B9%84%EB%A7%90', 'chunks': 5, 'source_type': 'wiki', 'source_label': '위키백과'}, {'title': '감염 경로', 'url': 'https://ko.wikipedia.org/wiki/%EA%B0%90%EC%97%BC_%EA%B2%BD%EB%A1%9C', 'chunks': 13, 'source_type': 'wiki', 'source_label': '위키백과'}, {'title': '홍역', 'url': 'https://ko.wikipedia.org/wiki/%ED%99%8D%EC%97%AD', 'chunks': 3, 'source_type': 'wiki', 'source_label': '위키백과'}, {'title': '홍역 검역관리지역 지정 국가', 'url': 'https://www.data.go.kr/data/15139251/openapi.do', 'chunks': 3, 'source_type': 'public_api', 'source_label': '공공데이터 API · 검역관리지역'}, {'title': '홍역 연령·성별 신고 현황', 'url': 'https://dportal.kdca.go.kr/pot/is/summary.do', 'chunks': 1, 'source_type': 'public_stats', 'source_label': '공공 통계 · 감염병포털'}]
+
+[LangGraph 구조]
+---
+config:
+  flowchart:
+    curve: linear
+---
+graph TD;
+	__start__([<p>__start__</p>]):::first
+	retrieve(retrieve)
+	generate(generate)
+	__end__([<p>__end__</p>]):::last
+	__start__ --> retrieve;
+	retrieve --> generate;
+	generate --> __end__;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc
+
+[비교] 1회 실행 후 (133, 133, 1874) → 2회 실행 후 (133, 133, 1874) (로드 항목, 메타 청크, 문서 청크)

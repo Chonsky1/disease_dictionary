@@ -1,0 +1,73 @@
+# 16_F2014_유사도_MMR_비교
+# 2026-10-23 10:32:27 · 실제 실행
+
+$ python -m scripts.ask --disease 브루셀라증 --no-collect --top-k 5 --search-type similarity "브루셀라증은 사람에게 어떻게 옮나요?"
+(소요 17.4s, 종료 코드 0)
+== 브루셀라증 (제3급) | top_k=5 search=similarity policy=always
+  … 검색어를 추출하는 중
+  … 검색어: 브루셀라증 전파 경로, 브루셀라증 감염 경로, 브루셀라증 인수공통감염병
+  … 근거를 검색하는 중
+  … 답변을 생성하는 중
+
+[프롬프트 1] 검색어: ['브루셀라증 전파 경로', '브루셀라증 감염 경로', '브루셀라증 인수공통감염병']
+
+[근거 목록]
+  [근거 1] 항목 메타데이터 · 브루셀라증  · https://dportal.kdca.go.kr/pot/ii/sttyInftnsds/sttyInftnsds.do
+  [근거 2] 위키백과 · 브루셀라증 / 전파 경로 · https://ko.wikipedia.org/wiki/%EB%B8%8C%EB%A3%A8%EC%85%80%EB%9D%BC%EC%A6%9D
+  [근거 3] 위키백과 · 브루셀라증 / 사람의 증상 · https://ko.wikipedia.org/wiki/%EB%B8%8C%EB%A3%A8%EC%85%80%EB%9D%BC%EC%A6%9D
+  [근거 4] 위키백과 · 브루셀라증 / 예방 · https://ko.wikipedia.org/wiki/%EB%B8%8C%EB%A3%A8%EC%85%80%EB%9D%BC%EC%A6%9D
+  [근거 5] 위키백과 · 브루셀라증 / 개요 · https://ko.wikipedia.org/wiki/%EB%B8%8C%EB%A3%A8%EC%85%80%EB%9D%BC%EC%A6%9D
+  [근거 6] 공공 통계 · 감염병포털 · 브루셀라증 연령·성별 신고 현황 / 연령·성별 · https://dportal.kdca.go.kr/pot/is/summary.do
+
+[답변]
+### 핵심 답변
+브루셀라증은 보통 감염된 가축(염소, 양, 돼지, 소 등)과 접촉하여 감염됩니다. 사람 간 전파는 드뭅니다[근거 2, 4].
+
+### 카테고리
+- 전염성·전파 경로  
+  - 브루셀라증은 염소, 양, 돼지, 소 등 가축에 의해 전염됩니다.  
+  - 사람은 보통 브루셀라에 감염된 동물과 접촉하여 감염됩니다.  
+  - 사람 사이의 전파는 드뭅니다.  
+  - 가축의 멸균하지 않은 우유를 마시거나 관련 음식을 섭취했을 경우 감염될 가능성이 높습니다.  
+  - 가축의 사체를 다루는 수의사, 도축장이나 실험실 직원 등도 감염될 수 있습니다.
+
+[인용된 근거] ['근거 2', '근거 4']
+
+[시간] 13.9초 · 첫 글자 12.8초 · LLM 2회 (검색어 10.2 · 근거 검색 1.4 · 답변 1.9)
+
+$ python -m scripts.ask --disease 브루셀라증 --no-collect --top-k 5 --search-type mmr "브루셀라증은 사람에게 어떻게 옮나요?"
+(소요 7.1s, 종료 코드 0)
+== 브루셀라증 (제3급) | top_k=5 search=mmr policy=always
+  … 검색어를 추출하는 중
+  … 검색어: 브루셀라증 전파 경로, 브루셀라증 감염 경로, 브루셀라증 인수공통감염병
+  … 근거를 검색하는 중
+  … 답변을 생성하는 중
+
+[프롬프트 1] 검색어: ['브루셀라증 전파 경로', '브루셀라증 감염 경로', '브루셀라증 인수공통감염병']
+
+[근거 목록]
+  [근거 1] 항목 메타데이터 · 브루셀라증  · https://dportal.kdca.go.kr/pot/ii/sttyInftnsds/sttyInftnsds.do
+  [근거 2] 위키백과 · 브루셀라증 / 전파 경로 · https://ko.wikipedia.org/wiki/%EB%B8%8C%EB%A3%A8%EC%85%80%EB%9D%BC%EC%A6%9D
+  [근거 3] 위키백과 · 브루셀라증 / 사람의 증상 · https://ko.wikipedia.org/wiki/%EB%B8%8C%EB%A3%A8%EC%85%80%EB%9D%BC%EC%A6%9D
+  [근거 4] 공공 통계 · 감염병포털 · 브루셀라증 연령·성별 신고 현황 / 연령·성별 · https://dportal.kdca.go.kr/pot/is/summary.do
+  [근거 5] 위키백과 · 브루셀라증 / 기타 · https://ko.wikipedia.org/wiki/%EB%B8%8C%EB%A3%A8%EC%85%80%EB%9D%BC%EC%A6%9D
+  [근거 6] 위키백과 · 감염병 / 예방 · https://ko.wikipedia.org/wiki/%EA%B0%90%EC%97%BC%EB%B3%91
+
+[답변]
+### 핵심 답변
+브루셀라증은 주로 염소, 양, 돼지, 소 등 가축에 감염된 동물과 접촉하여 사람에게 옮습니다. 사람 사이의 전파는 드뭅니다[근거 2].
+
+### 카테고리
+- 전염성·전파 경로  
+  - 염소, 양, 돼지, 소 등 가축에 의해 전염됩니다.  
+  - 사람은 보통 감염된 동물과 접촉하여 감염됩니다.  
+  - 사람 사이의 전파는 드뭅니다[근거 2].
+
+[인용된 근거] ['근거 2']
+
+[시간] 3.7초 · 첫 글자 3.0초 · LLM 2회 (검색어 1.1 · 근거 검색 0.9 · 답변 1.4)
+
+[비교]
+유사도에만: 브루셀라증 / 예방 · https://ko.wikipedia.org/wiki/%EB%B8%8C%EB%A3%A8%EC%85%80%EB%9D%BC%EC%A6%9D | 브루셀라증 / 개요 · https://ko.wikipedia.org/wiki/%EB%B8%8C%EB%A3%A8%EC%85%80%EB%9D%BC%EC%A6%9D
+MMR에만: 브루셀라증 / 기타 · https://ko.wikipedia.org/wiki/%EB%B8%8C%EB%A3%A8%EC%85%80%EB%9D%BC%EC%A6%9D | 감염병 / 예방 · https://ko.wikipedia.org/wiki/%EA%B0%90%EC%97%BC%EB%B3%91
+외부 문서 종류 수: 유사도 2개 · MMR 3개 (fetch_k=30에서 다양성으로 선별)
