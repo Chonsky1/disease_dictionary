@@ -7,6 +7,10 @@ from langchain_core.language_models import BaseChatModel
 
 
 def make_chat_model(settings: dict) -> BaseChatModel:
+    from data_prep import settings as paths
+    if paths.OFFLINE:      # 오프라인 모의 실행 (scripts/offline_env.py): 규칙 기반 가짜 모델
+        from scripts.offline_env import offline_chat_model
+        return offline_chat_model()
     from langchain_openai import ChatOpenAI
 
     kwargs = {"model": settings["chat_model"], "temperature": settings.get("temperature", 0), "timeout": 60,

@@ -29,6 +29,9 @@ def setup_logging() -> None:
 
 
 def make_wiki_client(settings: dict) -> WikiClient:
+    if paths.OFFLINE:      # 오프라인 모의 실행: 가짜 MediaWiki
+        from tests.fakes import fake_wiki_client
+        return fake_wiki_client()[0]
     ua = paths.env("WIKI_USER_AGENT", required=True)
     return WikiClient(ua, min_interval=settings["wiki_min_interval_sec"], max_retries=settings["wiki_max_retries"])
 

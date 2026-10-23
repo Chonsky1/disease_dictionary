@@ -1,3 +1,7 @@
 # EDA-only dependencies (service code does not need these)
 pandas>=2.2
 matplotlib>=3.8
+
+# 검증·증빙 도구 (scripts/verify_checklist.py, capture_screens.py)
+openpyxl>=3.1          # 체크리스트 xlsx 채우기
+playwright==1.56.0     # 화면 캡처 → 설치 후 'python -m playwright install chromium'

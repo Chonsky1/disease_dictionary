@@ -92,6 +92,10 @@ html { scroll-behavior: smooth; }
 .kd-cat-title { font-weight: 700; color: var(--kd-teal); font-size: .95rem; margin-bottom: .25rem; }
 .kd-cite { color: var(--kd-muted); font-size: .75rem; white-space: nowrap; }
 .kd-timing { color: var(--kd-muted); font-size: .78rem; margin: .3rem 0 .2rem; }
+.kd-src { display: inline-block; font-size: .72rem; font-weight: 600; padding: .05rem .45rem; border-radius: 999px;
+          margin-right: .35rem; border: 1px solid currentColor; white-space: nowrap; }
+.kd-src-meta { color: #f2b84b; } .kd-src-wiki { color: #7cc4ff; }
+.kd-src-public_api { color: #7ee0a8; } .kd-src-public_stats { color: #d59bff; }
 .st-key-chat_summary .stMarkdown p, .st-key-chat_summary li { font-size: .92rem; line-height: 1.55; }
 .st-key-detail_chat { max-width: 980px; }
 [data-testid="InputInstructions"] { display: none !important; }   /* 'Press Enter to submit form' 숨김 */

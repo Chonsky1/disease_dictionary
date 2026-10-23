@@ -11,8 +11,12 @@ except ImportError:  # pragma: no cover
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / "config"
-DATA = ROOT / "data"
-SEED = DATA / "seed"
+# KDCA_DATA_DIR: 수집·색인 결과를 다른 폴더에 두기 (검증 도구의 '색인 없음' 화면, 오프라인 모의 실행).
+# 시드 CSV(data/seed)는 저장소에 들어 있으므로 항상 프로젝트 폴더의 것을 쓴다.
+DATA = Path(os.getenv("KDCA_DATA_DIR") or ROOT / "data").resolve()
+SEED = ROOT / "data" / "seed"
+# KDCA_OFFLINE_DEMO=1: 가짜 모델·가짜 위키로 실행 (키·네트워크 없이 검증 도구가 동작하는지만 확인, scripts/offline_env.py)
+OFFLINE = os.getenv("KDCA_OFFLINE_DEMO") == "1"
 RAW = DATA / "raw"
 RAW_API = RAW / "api"
 RAW_CSV = RAW / "csv"
@@ -55,10 +59,15 @@ def load_rag_settings(path: Path | None = None, **overrides) -> dict:
 
     cfg = json.loads((path or CONFIG / "rag_settings.json").read_text(encoding="utf-8"))
     cfg = {k: v for k, v in cfg.items() if not k.startswith("_")}
+    if os.getenv("KDCA_SETTINGS"):   # 검증 도구용 덮어쓰기 (예: '{"answer_cache": false}')
+        cfg.update(json.loads(os.environ["KDCA_SETTINGS"]))
     cfg.update({k: v for k, v in overrides.items() if v is not None})
     if cfg["chunk_overlap"] >= cfg["chunk_size"]:
         raise ValueError("chunk_overlap은 chunk_size보다 작아야 합니다.")
     if cfg["search_type"] not in ("similarity", "mmr"):
         raise ValueError("search_type은 similarity 또는 mmr 이어야 합니다.")
-    cfg["chroma_dir"] = str((ROOT / cfg["chroma_dir"]).resolve())
+    chroma = Path(cfg["chroma_dir"])
+    if not chroma.is_absolute():   # "data/chroma" → KDCA_DATA_DIR을 따른다
+        chroma = DATA / chroma.relative_to("data") if chroma.parts[:1] == ("data",) else ROOT / chroma
+    cfg["chroma_dir"] = str(chroma.resolve())
     return cfg

@@ -51,7 +51,7 @@ class WikiCollector:
         return {}
 
     def _save_cache(self, cache: dict) -> None:
-        tmp = self.cache_path.with_suffix(".tmp")
+        tmp = self.cache_path.with_suffix(f".{uuid.uuid4().hex}.tmp")   # 다른 프로세스와 겹쳐도 안전하게
         tmp.write_text(json.dumps(cache, ensure_ascii=False, indent=2), encoding="utf-8")
         tmp.replace(self.cache_path)
 

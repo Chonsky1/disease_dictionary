@@ -33,8 +33,16 @@ class RuleChatModel(BaseChatModel):
             kind, out = "query", json.dumps({"queries": ["홍역 바이러스", "MMR 백신"]}, ensure_ascii=False)
         elif "검토자" in system:
             kind, out = "select", '```json\n{"selected": ["c1"]}\n```'
-        elif "안내원" in system:
-            kind, out = "answer", self.answer_text
+        elif "여행 안내원" in system:      # 여행 전 안내: 공공데이터 API 근거와 첫 메타데이터 근거를 인용
+            api = re.findall(r"\[근거 (\d+)\] \(출처 유형: 공공데이터 API", human)
+            n = api[0] if api else "1"
+            name = (re.findall(r"\[감염병: ([^|\]]+?) \|", human) or ["감염병"])[0]
+            kind, out = "travel", (f"### 핵심 답변\n{name}에 주의해야 합니다 [근거 {n}].\n\n### {name}\n"
+                                   f"- 이 나라가 검역관리지역으로 지정되어 있습니다 [근거 {n}]\n"
+                                   "- 신고 기준은 항목 정보에 있습니다 [근거 1]")
+        elif "안내원" in system:      # 문서에 없는 것(가격·특정 지역 환자 수)은 확인되지 않는다고 답함
+            unknown = any(k in human.split("[근거]")[0] for k in ("가격", "약가", "확진자 수"))
+            kind, out = "answer", ("제공된 문서에서 확인되지 않습니다." if unknown else self.answer_text)
         elif "걸러 주는" in system:
             ids = re.findall(r"id: (inf_\d{4})", human)[:2]
             kind, out = "condition", json.dumps({"matches": [{"id": i, "reason": "조건 충족"} for i in ids] +

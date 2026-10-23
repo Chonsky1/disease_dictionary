@@ -87,9 +87,11 @@ class UiTest(_UiBase):
         texts = md(at)
         self.assertEqual(rt.by_id[at.session_state["disease"]].display_name, "홍역")   # 질문 속 이름으로 자동 선택
         self.assertIn("[근거 1]", texts)
-        self.assertIn("**[근거 1]** 홍역 · 항목 메타데이터 · [원문](https://dportal.kdca.go.kr", texts)
-        self.assertRegex(texts, r"\*\*\[근거 2\]\*\* .+ · 위키백과 · \[원문\]\(https://ko\.wikipedia\.org/")
-        self.assertNotIn("**[근거 3]**", texts)        # 인용되지 않은 근거는 표시하지 않음
+        self.assertIn("<span class='kd-src kd-src-meta'>항목 메타데이터</span><b>[근거 1]</b> 홍역 · 항목 메타데이터 · "
+                      "<a href='https://dportal.kdca.go.kr", texts)            # 출처 종류 배지 (F2008, F2016)
+        self.assertRegex(texts, r"kd-src-wiki'>위키백과</span><b>\[근거 2\]</b> .+ · 위키백과 · <a href='https://ko\.wikipedia\.org/")
+        self.assertNotIn("<b>[근거 3]</b>", texts)     # 인용되지 않은 근거는 표시하지 않음
+        self.assertTrue(any(e.label == "근거 2건 · 위키백과 / 항목 메타데이터" for e in at.expander))
         self.assertTrue(any("전문가의 진단" in c.value for c in at.caption))   # 면책 안내
         self.assertIn("📝 요약", texts)
         self.assertIn("- **홍역**: 홍역은 제2급 감염병이며", texts)            # 오른쪽 요약 (LLM 형식이 안 맞으면 추출 요약)
@@ -182,6 +184,26 @@ class HomeTest(_UiBase):
         details[0].click().run()                               # 가나다순 첫 항목 = 뎅기열
         self.assertEqual(rt.by_id[at.query_params["d"][0]].display_name, "뎅기열")
         self.assertIn("kd-detail-name", md(at))
+        self.assertEqual(len(at.exception), 0)
+
+    def test_travel_brief_with_evidence_and_query_param(self):
+        """나라 팝업의 '여행 전 안내' (F2010): 공공데이터 API·메타데이터 근거와 함께. ?country=VNM으로 바로 열기."""
+        from data_prep.public_docs import index_public_docs
+        from service.age import load_age_stats
+        from service.countries import load_watch
+        at, rt = self._home()
+        index_public_docs(rt.store, rt.diseases, load_watch(self.tmp / "country_watch.json"),
+                          load_age_stats(self.tmp / "none.json"))
+        at.query_params["country"] = "VNM"
+        at.run()
+        self.assertEqual(at.session_state["country"], "VNM")
+        next(b for b in at.button if b.key == "travel_VNM").click().run()
+        html = md(at)
+        self.assertIn("✈️ 여행 전 안내", html)
+        self.assertIn("검역관리지역으로 지정되어 있습니다", html)
+        labels = [e.label for e in at.expander]
+        self.assertTrue(any("공공데이터 API" in l and "항목 메타데이터" in l for l in labels), labels)
+        self.assertIn("kd-src-public_api", html)
         self.assertEqual(len(at.exception), 0)
 
     def test_close_and_other_countries(self):

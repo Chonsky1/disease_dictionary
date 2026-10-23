@@ -180,7 +180,8 @@ def make_retrieve(svc: RagServices):
             raise IndexMissingError("메타데이터 색인이 없습니다.")
 
         policy = svc.opt("collect_policy", "background")
-        have_docs = svc.store.docs_count(did) >= int(svc.opt("min_docs_for_fast", 1))
+        # '이미 모은 문서'는 위키 문서만 센다 (공공데이터 문서는 색인 때 미리 들어가 있으므로)
+        have_docs = svc.store.docs_count(did, "wiki") >= int(svc.opt("min_docs_for_fast", 1))
         queries, collect_log, warnings, pool = [], [], [], None
         if policy == "background" and not have_docs and svc.collector is not None:
             # 처음 묻는 감염병: LLM이 필요 없는 항목 자체 문서만 바로 색인하고 답한다.
@@ -190,7 +191,7 @@ def make_retrieve(svc: RagServices):
                     collect_log = _collect(svc, disease, question, [], meter)
                 except Exception:  # noqa: BLE001
                     log.exception("항목 문서 수집 실패")
-            have_docs = svc.store.docs_count(did) >= int(svc.opt("min_docs_for_fast", 1))
+            have_docs = svc.store.docs_count(did, "wiki") >= int(svc.opt("min_docs_for_fast", 1))
         fast = policy in ("when_needed", "background") and have_docs and svc.collector is not None
         report = None
         if fast:

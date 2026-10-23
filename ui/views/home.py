@@ -3,6 +3,8 @@
 처음 들어오면(세션당 한 번) 인트로: 제목이 왼쪽에 크게, 지구본이 오른쪽 절반에 있다가
 제목은 왼쪽 위로 작아지며 올라가고, 지구본은 가운데로 오고, 그 사이에 안내 문구와 검색창이 나타난다.
 나라를 누르면 지구본이 왼쪽으로 비키고 오른쪽에 그 나라의 검역감염병 팝업이 천천히 나타난다.
+팝업의 '여행 전 안내'는 그 나라 검역감염병의 전파 경로·예방을 근거와 함께 정리한다 (F2010, service/travel.py).
+주소에 ?country=VNM 처럼 ISO-3 코드를 붙이면 그 나라 팝업이 열린 채로 시작한다 (공유·화면 캡처용).
 """
 from __future__ import annotations
 
@@ -11,7 +13,9 @@ import streamlit as st
 from data_prep.sources import license_label
 from service.countries import country_from_event
 from service.runtime import DISCLAIMER
-from ui.common import HOME_ISO, MAP_CONFIG, all_country_names, detail_button, runtime, search_box, watch
+from service.travel import travel_brief
+from ui.chat_core import is_quota_error, render_answer, render_evidence
+from ui.common import HOME_ISO, MAP_CONFIG, all_country_names, detail_button, log, runtime, search_box, watch
 from ui.map_view import HIGH, LOW, NEUTRAL, SELECTED, build_world_map
 from ui.styles import INTRO_CSS
 
@@ -24,6 +28,10 @@ ss = st.session_state
 ss.setdefault("country", None)
 ss.setdefault("_map_pick", None)
 ss.setdefault("map_gen", 0)          # 팝업을 닫을 때 지도 선택 상태를 비우려고 차트 key를 바꾼다
+ss.setdefault("travel", {})          # 나라 키 → 여행 전 안내 결과
+_qp = st.query_params.get("country")
+if _qp in names and not ss.get("_country_qp"):     # ?country=VNM 으로 들어온 경우 (처음 한 번)
+    ss["country"] = ss["_country_qp"] = _qp
 if not ss.get("intro_done"):         # 인트로는 세션당 한 번만
     st.markdown(INTRO_CSS, unsafe_allow_html=True)
     ss["intro_done"] = True
@@ -69,6 +77,29 @@ def globe(height: int) -> None:
                  format_func=lambda k: names[k], on_change=on_country_select, label_visibility="collapsed")
 
 
+def travel_section(key: str, c) -> None:
+    ids = [x.get("disease_id") for x in c.diseases if x.get("disease_id") in rt.by_id]
+    if not ids:
+        return
+    if key not in ss["travel"]:
+        if not st.button("✈️ 여행 전 안내 만들기 (근거 포함)", key=f"travel_{key}", width="stretch"):
+            return
+        try:
+            with st.spinner("감염병별 근거를 모아 정리하는 중"):
+                ss["travel"][key] = travel_brief(names.get(key, key), w.as_of, ids, rt)
+        except Exception as exc:  # noqa: BLE001 - 추적 정보는 로그에만 (NF2004)
+            log.exception("여행 전 안내 실패")
+            st.error("AI 사용 한도를 넘었습니다 (GMS 429). 잠시 후 다시 시도해 주세요." if is_quota_error(exc)
+                     else "안내를 만드는 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.")
+            return
+        st.rerun()          # 버튼을 지우고 결과만 보이게
+    res = ss["travel"][key]
+    with st.container(key=f"travel_box_{key}"):
+        st.markdown("<div class='kd-card-title'>✈️ 여행 전 안내</div>", unsafe_allow_html=True)
+        render_answer(res["answer"], ncols=1)
+        render_evidence(res)
+
+
 def country_panel(key: str) -> None:
     head = st.columns([5, 1], vertical_alignment="center")
     head[0].markdown(f"<div class='kd-country-name'>{names.get(key, key)}</div>", unsafe_allow_html=True)
@@ -92,6 +123,7 @@ def country_panel(key: str) -> None:
                                                          if item.get("note") else ""), unsafe_allow_html=True)
                 with row[1]:
                     detail_button(item.get("disease_id", ""), f"detail_{key}_{i}", rt=rt)
+        travel_section(key, c)
     src = f"[{w.source}]({w.source_url})" if w.source_url else w.source
     st.caption(f"기준일 {w.as_of} · 출처 {src} ({license_label('quarantine_area')})  \n검역관리지역: 검역법에 따라 WHO·현지 공관 등의 감염병 발생 "
                "정보를 기준으로 지정한 지역. 귀국 후 의심 증상이 있으면 1339에 문의하세요.")

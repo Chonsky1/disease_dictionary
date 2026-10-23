@@ -26,6 +26,8 @@ def main(argv=None, embeddings=None) -> int:
     diseases = load_diseases(paths.DISEASES_CSV)
     print(f"로드한 항목 {len(diseases)}건 / {settings['meta_collection']} 청크 {store.meta_count()}건 / "
           f"{settings['docs_collection']} 청크 {store.docs_count()}건")
+    print(f"{settings['docs_collection']} 출처 종류별 청크: {store.count_by_type() or '없음'} "
+          "(wiki=위키백과, public_api=검역관리지역 API, public_stats=감염병포털 통계)")
 
     d = next((x for x in diseases if args.disease in x.name), diseases[0])
     meta = store.get_meta(d.disease_id)

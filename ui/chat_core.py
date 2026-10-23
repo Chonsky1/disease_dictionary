@@ -41,8 +41,8 @@ def _cites(md: str) -> str:
     return _CITE.sub(lambda m: f"<span class='kd-cite'>{m.group(0)}</span>", md)
 
 
-def render_answer(text: str) -> None:
-    """카테고리가 있으면 핵심 답변은 강조 상자, 나머지는 두 칸 카드로. 없으면 그대로."""
+def render_answer(text: str, ncols: int = 2) -> None:
+    """카테고리가 있으면 핵심 답변은 강조 상자, 나머지는 ncols칸 카드로. 없으면 그대로."""
     head, sections = split_sections(text)
     if not sections:
         st.markdown(_cites(text), unsafe_allow_html=True)
@@ -54,13 +54,22 @@ def render_answer(text: str) -> None:
     if core:
         st.markdown(f"<div class='kd-core'>💡 {_cites(html.escape(core[0]).replace(chr(10), '<br>'))}</div>",
                     unsafe_allow_html=True)
-    for i in range(0, len(rest), 2):
-        cols = st.columns(2, gap="small")
-        for col, (title, body) in zip(cols, rest[i:i + 2]):
+    for i in range(0, len(rest), ncols):
+        cols = st.columns(ncols, gap="small")
+        for col, (title, body) in zip(cols, rest[i:i + ncols]):
             with col, st.container(key=f"cat_{abs(hash((title, body))) % 10**8}"):
                 st.markdown(f"<div class='kd-cat-title'>{ICONS.get(title, '•')} {html.escape(title)}</div>",
                             unsafe_allow_html=True)
                 st.markdown(_cites(body), unsafe_allow_html=True)
+
+
+SOURCE_KINDS = {"meta": "항목 메타데이터", "wiki": "위키백과", "public_api": "공공데이터 API", "public_stats": "공공 통계"}
+
+
+def source_badge(e: dict) -> str:
+    """근거 출처 종류 배지 (F2008 메타데이터/외부 문서 구분, F2016 출처 종류 구분)."""
+    kind = e.get("source_type", "wiki")
+    return f"<span class='kd-src kd-src-{html.escape(kind)}'>{html.escape(SOURCE_KINDS.get(kind, kind))}</span>"
 
 
 def render_evidence(msg: dict) -> None:
@@ -70,13 +79,16 @@ def render_evidence(msg: dict) -> None:
     if not cited:
         st.caption("인용된 근거가 없습니다. 제공된 문서로 확인되지 않는 내용일 수 있습니다.")
         return
-    with st.expander(f"근거 {len(cited)}건"):
+    cited = sorted(cited, key=lambda e: e["n"])
+    kinds = sorted({SOURCE_KINDS.get(e.get("source_type", "wiki"), "기타") for e in cited})
+    with st.expander(f"근거 {len(cited)}건 · {' / '.join(kinds)}"):
         for e in cited:
-            sec = f" / {e['section']}" if e.get("section") else ""
-            line = f"**[근거 {e['n']}]** {e['title']}{sec} · {e['source_label']} · [원문]({e['url']})"
+            sec = f" / {html.escape(e['section'])}" if e.get("section") else ""
+            line = (f"{source_badge(e)}<b>[근거 {e['n']}]</b> {html.escape(e['title'])}{sec} · "
+                    f"{html.escape(e['source_label'])} · <a href='{html.escape(e['url'])}' target='_blank'>원문</a>")
             if e.get("wiki_url"):
-                line += f" · [요약 출처: 위키백과]({e['wiki_url']})"
-            st.markdown(line)
+                line += f" · <a href='{html.escape(e['wiki_url'])}' target='_blank'>요약 출처: 위키백과</a>"
+            st.markdown(line, unsafe_allow_html=True)
 
 
 def show_message(msg: dict, rt, show_disease: bool = True) -> None:

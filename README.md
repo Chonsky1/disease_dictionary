@@ -16,7 +16,7 @@ source venv/Scripts/activate        # macOS/Linux: source venv/bin/activate
 export PYTHONUTF8=1                 # 한글 인코딩 오류 예방 (~/.bashrc에 넣어 두면 편함)
 pip install -r requirements.txt
 cp .env.example .env                # OPENAI_API_KEY, WIKI_USER_AGENT 입력
-python -m unittest discover -s tests -t .   # 키·네트워크 없이 92개 테스트
+python -m unittest discover -s tests -t .   # 키·네트워크 없이 105개 테스트
 ```
 
 ## 2. 색인 → 실행
@@ -29,6 +29,7 @@ python -m scripts.build_index --prefetch-docs  # (권장) 133개 항목 문서�
 python -m scripts.fetch_quarantine             # 나라별 검역감염병 수집 (…/QuarantineRegion/NationDisease, 또는 --csv 파일데이터)
 python -m scripts.fetch_quarantine --raw       # (선택) API 호출 없이 마지막 저장 원본으로 다시 만들기 (변환표 수정 후 등)
 python -m scripts.build_age_stats              # 연령별·시기별 통계 (data/raw/stats/의 감염병포털 CSV·xlsx → age_stats.json)
+python -m scripts.build_index                  # (위 두 파일을 만든 뒤 한 번 더) 공공데이터 문서를 위키 문서와 함께 색인 (F2016)
 streamlit run ui/app.py                        # 반드시 프로젝트 폴더에서 실행 (.streamlit/config.toml 적용)
 ```
 
@@ -48,7 +49,10 @@ streamlit run ui/app.py                        # 반드시 프로젝트 폴더�
 | RAG | `rag/prompts.py` | 프롬프트 3종 + 조건 탐색 1종. 답변은 '### 핵심 답변 / 초기 증상 / 전체 증상 / 잠복기 / 치사율·중증도 / 전염성·전파 경로 / 발생 지역 / 치료 / 예방 / 신고·관리' 중 해당 항목만 |
 | | `rag/metrics.py`, `rag/answer_cache.py` | 답변 시간·호출 수 기록, 같은 질문 저장 답변 |
 | | `rag/graph.py` | LangGraph `retrieve` → `generate` (F2003, F2006~F2008). 배경 수집·병렬 수집·스트리밍 ([속도](docs/PERFORMANCE.md)) |
-| 서비스 | `service/explore.py` | 조건 기반 탐색 (F2011) |
+| 서비스 | `service/explore.py` | 조건 기반 탐색: 급수·신고 범위 필터 → 유사도 후보 → LLM 선별 → 결과 재대조 (F2011) |
+| | `service/travel.py` | 여행 전 안내: 나라의 검역감염병별 근거 모아 정리 (F2010) |
+| 데이터 준비 | `data_prep/public_docs.py` | 검역관리지역·감염병포털 통계 → 감염병별 레코드 문서 (F2016) |
+| 검증 | `scripts/verify_checklist.py`, `capture_screens.py`, `compare_rag.py` 외 | 셀프 체크리스트 27항목 실행·증빙·xlsx 기입, 화면 캡처, RAG 전후 비교 |
 | UI | `ui/app.py` | 페이지 라우터(다크 테마) + 항상 보이는 목차 바(로고 → 홈), 키·색인 사전 점검 (F2012) |
 | | `ui/views/home.py` | 홈: 제목·안내 → 감염병 검색창 → 지구본. 나라를 누르면 지구본이 왼쪽으로 비키고 오른쪽에 검역감염병 팝업 + '상세보기' |
 | | `ui/views/chat.py` | 감염병 질문하기: 큰 대화창(질문 속 감염병 자동 인식, 근거·출처) + 오른쪽 대화 요약, 이런 감염병 찾기 (F2009, F2011) |
@@ -67,12 +71,25 @@ streamlit run ui/app.py                        # 반드시 프로젝트 폴더�
 | 서비스·UI | `service/age.py`, `ui/age_view.py` | 연령대별 상위 감염병, 연령 분포, 유행 시기 계산과 차트 |
 | 설정 | `config/rag_settings.json` | 청크 크기·중복, Top-k, 검색 방식, 모델 |
 
+## 기능 (필수 / 심화)
+
+| 구분 | 기능 |
+| --- | --- |
+| 필수 F2001~F2012 | 133개 법정감염병 메타데이터 색인, 질문마다 위키백과 검색어 추출(프롬프트 1)·후보 선별(프롬프트 2)·수집 캐시, 근거 기반 답변(프롬프트 3, LangGraph 2노드), 근거 번호·출처, 감염병별 대화, 조건 탐색, 진행 상태·키/색인 안내·면책 |
+| 특화 F2010 | 홈 지구본(나라별 검역감염병) → 나라 팝업의 **여행 전 안내**(전파 경로·예방·귀국 후 할 일, 근거 포함), 연령별·시기별 통계, 감염병 상세보기 |
+| 심화 F2014 | MMR 검색 (`search_type: mmr`, 후보 30 → 다양성 선별) |
+| 심화 F2015 | RAG 전후 답변 비교 → [docs/RAG_COMPARISON.md](docs/RAG_COMPARISON.md) (`python -m scripts.compare_rag`) |
+| 심화 F2016 | 위키백과 + 공공데이터 API(검역관리지역) + 공공 통계(감염병포털)를 `disease_docs`에 함께 색인, 근거에 출처 종류 배지 |
+| (선택 안 함) F2013 | HTML·CSS·JS 프론트엔드 — 화면은 Streamlit |
+
+문서: [요구사항 정의서](docs/REQUIREMENTS.md) · [RAG 파이프라인 설계문서](docs/RAG_DESIGN.md) · [속도 개선](docs/PERFORMANCE.md)
+
 ## 4. 컬렉션과 청크 규칙
 
 | 컬렉션 | 단위 | 청크 ID | 주요 메타데이터 |
 | --- | --- | --- | --- |
 | `disease_meta` | 감염병 1건 = 1청크 | `inf_0021` (재색인해도 덮어쓰기) | grade, group, kcd, scope_*, wiki_title, source_url |
-| `disease_docs` | 위키 본문 청크 | `inf_0021:wiki-12345:0003` | disease_id, doc_id, title, section, source_url, query, collected_at |
+| `disease_docs` | 위키 본문 청크 (글자 수 청킹) + 공공데이터 레코드 (레코드 = 청크) | `inf_0021:wiki-12345:0003`, `inf_0057:kdca-quarantine-inf_0057:0000` | disease_id, doc_id, title, section, source_type(wiki/public_api/public_stats), source_label, source_url, license, query, collected_at |
 
 외부 문서 청크 앞에는 `[감염병: 홍역 | 문서: … | 섹션: 증상]` 머리말을 붙여, 잘린 조각도 어느 감염병 이야기인지 검색에 걸리게 했습니다.
 
@@ -90,6 +107,27 @@ streamlit run ui/app.py                        # 반드시 프로젝트 폴더�
 | 4.4 화면 | `streamlit run ui/app.py`, 키를 비운 채 실행, 색인 폴더(`data/chroma`)를 지운 채 실행 |
 
 자동 테스트(`tests/test_stage1.py`, `tests/test_ui.py`)가 위 항목 대부분을 가짜 LLM·가짜 위키로 확인합니다.
+
+### 셀프 체크리스트 자동 검증·증빙
+
+```bash
+pip install -r requirements-dev.txt && python -m playwright install chromium   # 처음 한 번 (화면 캡처용)
+python -m scripts.verify_checklist --xlsx "셀프체크리스트.xlsx" --author "이름"   # 실제 모델로 27항목 실행
+python -m scripts.verify_checklist --xlsx "셀프체크리스트.xlsx" --offline        # 키 없이 도구만 시험 (제출용 아님)
+```
+
+결과: `submission/evidence/`(항목별 실행 출력 `NN_*.txt/png`, 화면 캡처 `S08_*.png` …), `submission/셀프체크리스트_결과.xlsx`(결과·증빙·비고 기입),
+`submission/검증결과/`(요구사항 대조표, 테스트 결과표, 검증 요약). 항목별 명령만 따로 돌릴 수도 있습니다.
+
+| 체크리스트 | 명령 |
+| --- | --- |
+| 11 조건 탐색 결과 대조 | `python -m scripts.explore_check` |
+| 12 특화 기능 근거 | `python -m scripts.travel_check --country VNM` |
+| 17·18 RAG 전후 비교 | `python -m scripts.compare_rag` |
+| 21 키 노출 검사 | `python -m scripts.scan_secrets submission` |
+| 화면 캡처만 | `python -m scripts.capture_screens --out submission/evidence` |
+
+F2005 확인은 청크 설정을 500/100으로 바꿔 재색인한 뒤 원래 설정으로 되돌립니다(임베딩 호출 발생).
 
 ## 6. 출처와 이용 조건 (NF2007)
 
@@ -112,6 +150,7 @@ streamlit run ui/app.py                        # 반드시 프로젝트 폴더�
 
 | 날짜 | 내용 |
 | --- | --- |
+| 2026-10-23 | 셀프 체크리스트 대응: 검증·증빙 자동 생성(`verify_checklist`, `capture_screens`, `explore_check`, `travel_check`, `scan_secrets`), 오프라인 모의 실행(`KDCA_OFFLINE_DEMO`, `KDCA_DATA_DIR`). 심화 F2016 공공데이터 레코드 문서 색인·근거 출처 종류 배지, F2010 여행 전 안내(근거 포함), F2015 RAG 전후 비교(`compare_rag`), F2011 급수·신고 범위 필터와 결과 재대조. 요구사항 정의서·RAG 설계문서 |
 | 2026-10-22 | 출처 확인 완료(NF2007): 법정감염병 분류·표본감시 통계도 공공누리 제4유형, 사용하는 출처 모두 확인일 기록(테스트로 검사), 상세보기에 분류 출처 캡션 |
 | 2026-10-22 | 출처·이용 조건 정리(NF2007): 검역관리지역정보 '이용허락범위 제한 없음', 감염병포털 통계 공공누리 제4유형 기록, `sources.json`에 `license_url`·`checked_at`·`used`, 화면 캡션에 이용 조건과 집계 문구 표시, 등록부 검사 테스트 |
 | 2026-10-22 | 요구사항 보완: 감염병 질문하기 페이지에서 감염병별 대화 기록 따로 보관(F2009, 다른 감염병으로 바꿔도 이전 대화 유지, '대화 지우기'는 현재 감염병만), 대화 요약에 '대화한 감염병' 이동 버튼. 배경 수집 결과(검색어·새로 색인한 문서·버린 후보)를 다음 답변 진행 상태에 표시(F2003·F2004·F2012), `scripts.ask --policy`(기본 always)·`--use-cache` |

@@ -5,6 +5,10 @@ python -m scripts.build_index --no-wiki       # 네트워크 없이: CSV + 이�
 python -m scripts.build_index --prefetch-docs # 133개 항목 자체 문서도 disease_docs에 미리 색인 (첫 질문 속도↑)
 python -m scripts.build_index --rechunk       # 저장된 위키 본문을 현재 청크 설정으로 다시 색인
 python -m scripts.build_index --chunk-size 500 --chunk-overlap 100 --rechunk   # 설정 비교 실험
+python -m scripts.build_index --no-public-docs # 공공데이터 문서(검역관리지역·감염병포털 통계) 색인 생략
+
+공공데이터 문서(F2016): data/processed/country_watch.json·age_stats.json이 있으면 감염병별 레코드 문서로 만들어
+disease_docs에 위키 문서와 함께 색인한다 (data_prep/public_docs.py). 파일을 새로 만들었으면 이 스크립트를 다시 실행.
 
 몇 번을 실행해도 같은 항목·청크가 중복 저장되지 않는다 (청크 ID 고정 + upsert).
 위키 호출은 중간에 끊겨도 다시 실행하면 이어서 진행한다 (제목·본문 모두 파일 캐시).
@@ -36,6 +40,7 @@ def main(argv=None, embeddings=None, wiki_client=None) -> int:
     ap.add_argument("--rechunk", action="store_true")
     ap.add_argument("--chunk-size", type=int)
     ap.add_argument("--chunk-overlap", type=int)
+    ap.add_argument("--no-public-docs", action="store_true", help="공공데이터 문서 색인 생략")
     args = ap.parse_args(argv)
 
     paths.ensure_dirs()
@@ -103,7 +108,7 @@ def main(argv=None, embeddings=None, wiki_client=None) -> int:
                     total += store.index_page(d.disease_id, d.display_name, reader.get_page(pid, t["title"]),
                                               query=d.display_name)
         if args.rechunk:  # 이미 색인된 (감염병, 문서) 쌍을 저장된 본문으로 현재 설정에 맞춰 다시 자른다
-            got = store.docs._collection.get(include=["metadatas"])
+            got = store.docs._collection.get(where={"source_type": "wiki"}, include=["metadatas"])
             pairs = {(m["disease_id"], m["disease_name"], m["doc_id"], m["title"], m.get("query", ""))
                      for m in got["metadatas"]}
             for did, name, doc_id, title, query in pairs:
@@ -112,6 +117,20 @@ def main(argv=None, embeddings=None, wiki_client=None) -> int:
                     total += store.index_page(did, name, reader.get_page(pid, title), query=query)
         print(f"[index] {settings['docs_collection']}: 이번에 쓴 청크 {total}개, 전체 {store.docs_count()}개 "
               f"(chunk_size={settings['chunk_size']}, overlap={settings['chunk_overlap']})")
+    if not args.no_public_docs:
+        from data_prep.public_docs import index_public_docs
+        from service.age import load_age_stats
+        from service.countries import load_watch
+        watch = load_watch(paths.PROCESSED / "country_watch.json")
+        stats = load_age_stats(paths.PROCESSED / "age_stats.json")
+        if watch.loaded or stats.loaded:
+            r = index_public_docs(store, diseases, watch, stats)
+            print(f"[index] 공공데이터 문서 {r['docs']}건 → 청크 {r['chunks']}개 (레코드 = 청크, 종류별 문서 {r['by_type']}"
+                  + (f", 지정 해제로 지운 문서 {r['removed']}건" if r["removed"] else "") + ")")
+        else:
+            print("[index] 공공데이터 문서: country_watch.json·age_stats.json이 없어 건너뜀 "
+                  "(scripts.fetch_quarantine, scripts.build_age_stats 실행 후 다시)")
+    print(f"[index] {settings['docs_collection']} 출처 종류별 청크: {store.count_by_type() or '없음'}")
     return 0
 
 
