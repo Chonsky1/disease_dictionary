@@ -23,3 +23,11 @@ class SourcesTest(unittest.TestCase):
         self.assertEqual(license_label("sentinel"), "공공누리 제4유형(출처표시·비상업·변경금지)")
         self.assertEqual(license_label("vaccination_target"), "")     # 미확인(미사용)은 화면에 쓰지 않음
         self.assertIn("집계", stats_terms())
+
+
+class RequirementsFileTest(unittest.TestCase):
+    def test_requirements_are_ascii(self):
+        """Windows pip은 requirements를 cp949로 읽으므로 한글 주석이 있으면 설치가 깨진다."""
+        from data_prep import settings as paths
+        for name in ("requirements.txt", "requirements-dev.txt"):
+            (paths.ROOT / name).read_bytes().decode("ascii")

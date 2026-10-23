@@ -1,7 +1,10 @@
-# EDA-only dependencies (service code does not need these)
+# Dev / verification dependencies (service code does not need these).
+# Keep this file ASCII-only: pip on Windows reads it with the locale codec (cp949).
+
+# EDA
 pandas>=2.2
 matplotlib>=3.8
 
-# 검증·증빙 도구 (scripts/verify_checklist.py, capture_screens.py)
-openpyxl>=3.1          # 체크리스트 xlsx 채우기
-playwright==1.56.0     # 화면 캡처 → 설치 후 'python -m playwright install chromium'
+# Self-checklist tools (scripts/verify_checklist.py, scripts/capture_screens.py)
+openpyxl>=3.1          # fill the checklist xlsx
+playwright==1.56.0     # screen capture; then run: python -m playwright install chromium
