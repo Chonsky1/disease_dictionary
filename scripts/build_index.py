@@ -95,7 +95,7 @@ def main(argv=None, embeddings=None, wiki_client=None) -> int:
                   "    먼저 'python -m scripts.check_openai'로 연결을 점검하세요.")
             return 1
         raise
-    print(f"[index] {settings['meta_collection']}: {before}건 → {after}건 "
+    print(f"[index] {settings['meta_collection']}: {before}건 → {after}건 (새로 임베딩 {store.last_meta_written}건) "
           f"(로드 {len(diseases)}건과 일치: {after == len(diseases)}, 위키 요약 포함 {with_summary}건)")
 
     if args.prefetch_docs or args.rechunk:
@@ -124,8 +124,16 @@ def main(argv=None, embeddings=None, wiki_client=None) -> int:
         watch = load_watch(paths.PROCESSED / "country_watch.json")
         stats = load_age_stats(paths.PROCESSED / "age_stats.json")
         if watch.loaded or stats.loaded:
-            r = index_public_docs(store, diseases, watch, stats)
-            print(f"[index] 공공데이터 문서 {r['docs']}건 → 청크 {r['chunks']}개 (레코드 = 청크, 종류별 문서 {r['by_type']}"
+            try:
+                r = index_public_docs(store, diseases, watch, stats)
+            except Exception as exc:  # noqa: BLE001
+                if type(exc).__module__.startswith("openai"):
+                    print(f"[x] 공공데이터 문서 임베딩 실패: {type(exc).__name__}. 다시 실행하면 이미 넣은 문서는 건너뛰고 "
+                          "이어서 합니다 (python -m scripts.check_openai로 연결 점검).")
+                    return 1
+                raise
+            print(f"[index] 공공데이터 문서 {r['docs']}건 → 청크 {r['chunks']}개 (레코드 = 청크, 종류별 문서 {r['by_type']}, "
+                  f"새로 임베딩 {r['written']}건 · 내용 같아 건너뜀 {r['skipped']}건"
                   + (f", 지정 해제로 지운 문서 {r['removed']}건" if r["removed"] else "") + ")")
         else:
             print("[index] 공공데이터 문서: country_watch.json·age_stats.json이 없어 건너뜀 "

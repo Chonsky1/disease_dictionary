@@ -2,7 +2,8 @@
 
 python -m scripts.verify_checklist --xlsx "AI코어_셀프체크리스트.xlsx"                 # 전체 (실제 모델, 화면 캡처 포함)
 python -m scripts.verify_checklist --xlsx ... --no-screens                              # 화면 캡처 없이
-python -m scripts.verify_checklist --xlsx ... --only 3,4,6                             # 일부 항목만
+python -m scripts.verify_checklist --xlsx ... --only 1,2                               # 일부 항목만 다시 (나머지는 지난 결과 유지)
+python -m scripts.verify_checklist --xlsx ... --fill-only                              # 다시 실행하지 않고 지난 결과로 xlsx만
 python -m scripts.verify_checklist --xlsx ... --offline                                # 키 없이 도구 동작만 확인 (제출용 아님)
 
 하는 일
@@ -138,6 +139,18 @@ def counts(out: str) -> tuple[int, int, int] | None:
     return tuple(int(x) for x in m.groups()) if m else None
 
 
+def err_line(out: str) -> str:
+    """실패 출력에서 원인 한 줄 ([x] 안내 또는 마지막 예외 줄). 키 값은 스크립트가 출력하지 않는다."""
+    lines = [l.strip() for l in out.splitlines() if l.strip()]
+    for l in reversed(lines):
+        if l.startswith("[x]"):
+            return l[:160]
+    for l in reversed(lines):
+        if re.match(r"^[\w.]+(Error|Exception)\b", l):
+            return l[:160]
+    return lines[-1][:160] if lines else ""
+
+
 def text_to_png(txt: Path, png: Path, max_lines: int = 260) -> bool:
     """터미널 화면처럼 그린 캡처 (Playwright가 없으면 건너뜀)."""
     try:
@@ -167,8 +180,16 @@ def text_to_png(txt: Path, png: Path, max_lines: int = 260) -> bool:
 def check_index(v: Verifier) -> None:
     before = v.run(["scripts.inspect_index", "--disease", "홍역"], "inspect_before")
     b1 = v.run(["scripts.build_index"], "build1", timeout=3600)
+    if b1.code:      # 임베딩 API 일시 오류 등: 한 번 더 (이미 넣은 것은 건너뛰므로 빠름)
+        print(f"     색인 실패 → 한 번 더 실행: {err_line(b1.out)}")
+        b1 = v.run(["scripts.build_index"], timeout=3600)
+        v.cache["build1"] = b1
     mid = v.run(["scripts.inspect_index", "--disease", "홍역"], "inspect_mid")
     b2 = v.run(["scripts.build_index"], "build2", timeout=3600)
+    if b2.code:
+        print(f"     색인 실패 → 한 번 더 실행: {err_line(b2.out)}")
+        b2 = v.run(["scripts.build_index"], timeout=3600)
+        v.cache["build2"] = b2
     after = v.run(["scripts.inspect_index", "--disease", "홍역"], "inspect_after")
 
     # 1. F2001
@@ -180,7 +201,7 @@ def check_index(v: Verifier) -> None:
     missing = [a for a in attrs if a not in text]
     files = v.save("01_F2001_로드건수_색인건수_색인텍스트", [b1, mid])
     if b1.code or not (m and idx and c):
-        v.set(1, "F2001", UNK, files, f"색인 스크립트 실행 실패 또는 출력 해석 불가 (종료 코드 {b1.code})")
+        v.set(1, "F2001", UNK, files, f"색인 스크립트 실행 실패 (종료 코드 {b1.code}): {err_line(b1.out)}")
     else:
         ok = int(m.group(1)) == int(idx.group(1)) == c[0] == c[1] and not missing
         v.set(1, "F2001", PASS if ok else FAIL, files,
@@ -192,7 +213,7 @@ def check_index(v: Verifier) -> None:
     files = v.save("02_F2002_두번실행_청크수", [before, b1, mid, b2, after],
                    tail=f"[비교] 1회 실행 후 {c1} → 2회 실행 후 {c2} (로드 항목, 메타 청크, 문서 청크)")
     if not (c1 and c2) or b2.code:
-        v.set(2, "F2002", UNK, files, "색인 스크립트 2회 실행 실패")
+        v.set(2, "F2002", UNK, files, f"색인 스크립트 실행 실패: {err_line(b2.out if b2.code else b1.out)}")
     else:
         ok = c1 == c2
         v.set(2, "F2002", PASS if ok else FAIL, files,
@@ -618,8 +639,12 @@ def main(argv=None) -> int:
     ap.add_argument("--author", default="", help="앱 작성자 칸")
     ap.add_argument("--no-screens", action="store_true", help="화면 캡처 생략")
     ap.add_argument("--offline", action="store_true", help="키 없이 가짜 모델로 도구만 시험 (결과는 제출용 아님)")
-    ap.add_argument("--only", help="항목 번호 (예: 1,2,3)")
+    ap.add_argument("--only", help="항목 번호 (예: 1,2,3). 나머지 항목은 지난 결과(검증결과/results.json)를 그대로 쓴다")
+    ap.add_argument("--fill-only", action="store_true", help="다시 실행하지 않고 지난 결과로 문서·xlsx만 만든다")
     args = ap.parse_args(argv)
+    xlsx = resolve_xlsx(args.xlsx)
+    if args.xlsx and xlsx is None:
+        return 2
 
     out = Path(args.out) if args.out else (paths.REPORTS / "offline_check" if args.offline else paths.ROOT / "submission")
     out = out if out.is_absolute() else paths.ROOT / out
@@ -643,6 +668,13 @@ def main(argv=None) -> int:
             print("[!] playwright가 없어 화면 캡처를 생략합니다: pip install playwright && python -m playwright install chromium")
             screens = False
     v = Verifier(out, args.offline, screens, env)
+    saved = load_saved(v) if (args.only or args.fill_only) else {}
+    if args.fill_only:
+        if not saved:
+            print(f"지난 결과가 없습니다: {out / '검증결과' / 'results.json'}")
+            return 2
+        finish(v, saved.get("tests") if isinstance(saved.get("tests"), dict) else run_tests(v), xlsx, args.author)
+        return 0
     only = {int(x) for x in args.only.split(",")} if args.only else None
     want = (lambda *nos: not only or any(n in only for n in nos))
     print(f"[검증] {'오프라인 모의' if args.offline else '실제'} 실행 → {out}")
@@ -681,6 +713,62 @@ def main(argv=None) -> int:
     print("\n== 자동 테스트")
     tests = run_tests(v)
     print(f"   {tests['total']}개 · {'모두 통과' if tests['ok'] else '실패 있음'}")
+    finish(v, tests, xlsx, args.author)
+    return 0
+
+
+def resolve_xlsx(arg: str | None) -> Path | None:
+    """체크리스트 경로 확인 (검증을 다 돌린 뒤 파일이 없어 실패하지 않게 먼저 확인)."""
+    if not arg:
+        return None
+    p = Path(arg)
+    if p.exists():
+        return p.resolve()
+    found = sorted({q.resolve() for d in (Path.cwd(), paths.ROOT, paths.ROOT / "submission")
+                    for pat in ("*체크리스트*.xlsx", "*checklist*.xlsx") for q in d.glob(pat)
+                    if "_결과" not in q.name and not q.name.startswith("~$")})
+    if len(found) == 1:
+        print(f"[!] '{arg}'이(가) 없어 대신 찾은 파일을 씁니다: {found[0]}")
+        return found[0]
+    print(f"[x] 체크리스트 파일이 없습니다: {p.resolve()}")
+    if found:
+        print("    후보:", *found, sep="\n      ")
+    print("    --xlsx에 실제 파일 경로를 주세요 (예: --xlsx \"C:/Users/SSAFY/Downloads/2회차_셀프체크리스트.xlsx\")")
+    return None
+
+
+def results_path(v: Verifier) -> Path:
+    return v.out / "검증결과" / "results.json"
+
+
+def load_saved(v: Verifier) -> dict:
+    p = results_path(v)
+    summary = v.out / "검증결과" / "검증_요약.md"
+    if p.exists():
+        data = json.loads(p.read_text(encoding="utf-8"))
+        v.results = {int(k): Result(**r) for k, r in data.get("results", {}).items()}
+    elif summary.exists():       # results.json이 생기기 전 버전이 남긴 요약 표에서 복원
+        data = {}
+        for m in re.finditer(r"^\| (\d+) \| (.*?) \| (통과|실패|미확인|해당없음) \| (.*?) \| (.*) \|$",
+                             summary.read_text(encoding="utf-8"), flags=re.M):
+            files = [f.strip() for f in m.group(4).split(",") if f.strip()]
+            v.results[int(m.group(1))] = Result(int(m.group(1)), m.group(2), m.group(3), files, m.group(5))
+        p = summary
+    else:
+        return {}
+    try:
+        v.shots = {s["id"]: s for s in json.loads((v.ev / "screens.json").read_text(encoding="utf-8"))}
+    except (OSError, ValueError):
+        pass
+    print(f"[검증] 지난 결과 {len(v.results)}항목을 불러옴 ({p})")
+    return data or {"results": True}
+
+
+def finish(v: Verifier, tests: dict, xlsx: Path | None, author: str) -> None:
+    """25~27 제출 전 점검을 다시 계산하고 문서·xlsx·results.json을 쓴다."""
+    for n in (25, 26, 27):
+        v.results.pop(n, None)
+    out = v.out
     # 25~27 제출 전 점검
     req = [v.results.get(n) for n in range(1, 15) if n != 15]
     adv = [v.results.get(n) for n in (16, 17, 18, 19)]
@@ -704,14 +792,18 @@ def main(argv=None) -> int:
             + ("" if peer else " / 상호 체크리스트는 옆 교육생 점검 후 submission/에 추가해야 함"))
     v.set(27, "필수", PASS if not miss and peer and not v.offline else UNK, [p.name for p in docs_written[:2]],
           note if not miss else f"빠진 문서: {', '.join(miss)}")
-    docs_written = write_docs(v, tests)      # 25~27 반영해 다시 씀
-    if args.xlsx:
-        fill_xlsx(Path(args.xlsx), out / "셀프체크리스트_결과.xlsx", v, args.author)
+    write_docs(v, tests)      # 25~27 반영해 다시 씀
+    results_path(v).write_text(json.dumps({"offline": v.offline, "tests": tests,
+                                           "results": {n: r.__dict__ for n, r in sorted(v.results.items())}},
+                                          ensure_ascii=False, indent=2), encoding="utf-8")
+    if xlsx:
+        fill_xlsx(xlsx, out / "셀프체크리스트_결과.xlsx", v, author)
         print(f"\n[저장] {out / '셀프체크리스트_결과.xlsx'}")
+    else:
+        print("\n[!] --xlsx를 주지 않아 체크리스트 사본은 만들지 않았습니다 (나중에 --fill-only --xlsx <파일>)")
     print(f"[저장] {out / '검증결과'}, 증빙 {v.ev}")
     cnt = {s: sum(r.status == s for r in v.results.values()) for s in (PASS, FAIL, UNK, NA)}
     print(f"[요약] 통과 {cnt[PASS]} · 실패 {cnt[FAIL]} · 미확인 {cnt[UNK]} · 해당없음 {cnt[NA]}")
-    return 0
 
 
 if __name__ == "__main__":

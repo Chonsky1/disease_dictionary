@@ -18,6 +18,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from data_prep.wiki import SKIP_SECTIONS
 
 SEPARATORS = ["\n\n", "\n", ". ", "다. ", " ", ""]
+BATCH = 100          # 임베딩 요청 한 번에 넣을 청크 수
 
 
 def make_embeddings(settings: dict) -> Embeddings:
@@ -67,7 +68,16 @@ class DiseaseStore:
         ids = [m["disease_id"] for m in metadatas]
         if len(set(ids)) != len(ids):
             raise ValueError("disease_id가 중복됩니다.")
-        self.meta.add_texts(texts=texts, metadatas=metadatas, ids=ids)  # Chroma upsert → 멱등
+        # 내용이 같은 항목은 다시 임베딩하지 않는다 (재실행이 빠르고, 임베딩 API 일시 오류에 덜 노출됨)
+        old = self.meta._collection.get(ids=ids, include=["documents", "metadatas"])
+        same = {i for i, d, m in zip(old["ids"], old["documents"], old["metadatas"])
+                if (d, m) == (texts[ids.index(i)], metadatas[ids.index(i)])}
+        todo = [k for k, i in enumerate(ids) if i not in same]
+        self.last_meta_written = len(todo)
+        for s in range(0, len(todo), BATCH):
+            part = todo[s:s + BATCH]
+            self.meta.add_texts(texts=[texts[k] for k in part], metadatas=[metadatas[k] for k in part],
+                                ids=[ids[k] for k in part])          # Chroma upsert → 멱등
         return self.meta_count()
 
     def meta_count(self) -> int:
@@ -121,6 +131,29 @@ class DiseaseStore:
         if chunks:
             self.docs.add_documents(chunks, ids=[c.id for c in chunks])
         return len(chunks)
+
+    def index_pages(self, items: list[tuple[str, str, dict, str]]) -> dict:
+        """여러 (감염병 ID, 감염병 이름, 문서, 검색어)를 한꺼번에 색인. 내용이 그대로인 문서는 건너뛴다.
+
+        바뀐 문서만 지우고 다시 넣으며, 임베딩은 BATCH개씩 묶어 요청한다 (공공데이터 문서 수백 건을 빠르게).
+        """
+        new_docs, total, skipped, written = [], 0, 0, 0
+        for did, name, page, query in items:
+            chunks = self.chunk_page(did, name, page, query)
+            total += len(chunks)
+            old = self.docs._collection.get(where={"$and": [{"disease_id": did}, {"doc_id": page["doc_id"]}]},
+                                            include=["documents"])
+            if sorted(zip(old["ids"], old["documents"])) == sorted((c.id, c.page_content) for c in chunks):
+                skipped += 1
+                continue
+            if old["ids"]:
+                self.docs._collection.delete(ids=old["ids"])
+            new_docs += chunks
+            written += 1
+        for s in range(0, len(new_docs), BATCH):
+            part = new_docs[s:s + BATCH]
+            self.docs.add_documents(part, ids=[c.id for c in part])
+        return {"chunks": total, "written_docs": written, "skipped_docs": skipped, "written_chunks": len(new_docs)}
 
     def is_indexed(self, disease_id: str, doc_id: str) -> bool:
         got = self.docs._collection.get(where={"$and": [{"disease_id": disease_id}, {"doc_id": doc_id}]},

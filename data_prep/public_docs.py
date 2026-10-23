@@ -115,15 +115,17 @@ def all_pages(watch: WatchData, stats: AgeStats, by_id: dict[str, Disease]) -> l
 
 
 def index_public_docs(store, diseases: list[Disease], watch: WatchData, stats: AgeStats) -> dict:
-    """공공데이터 문서를 색인 (같은 doc_id는 지우고 다시 넣으므로 몇 번을 실행해도 청크 수가 늘지 않음)."""
+    """공공데이터 문서를 색인. 내용이 바뀐 문서만 지우고 다시 넣으므로 몇 번을 실행해도 청크 수가 늘지 않고,
+    두 번째 실행부터는 임베딩 호출이 거의 없다."""
     by_id = {d.disease_id: d for d in diseases}
     pages = all_pages(watch, stats, by_id)
     keep = {(did, p["doc_id"]) for did, p in pages}
     stale = store.public_doc_pairs() - keep          # 기준일이 바뀌어 지정이 풀린 감염병 문서는 지운다
     for did, doc_id in stale:
         store.delete_doc(did, doc_id)
-    chunks = sum(store.index_page(did, by_id[did].display_name, p, query="공공데이터") for did, p in pages)
+    r = store.index_pages([(did, by_id[did].display_name, p, "공공데이터") for did, p in pages])
     by_type: dict[str, int] = {}
     for _, p in pages:
         by_type[p["source_type"]] = by_type.get(p["source_type"], 0) + 1
-    return {"docs": len(pages), "chunks": chunks, "removed": len(stale), "by_type": by_type}
+    return {"docs": len(pages), "chunks": r["chunks"], "removed": len(stale), "by_type": by_type,
+            "written": r["written_docs"], "skipped": r["skipped_docs"]}
