@@ -37,6 +37,32 @@ streamlit run ui/app.py                        # 반드시 프로젝트 폴더�
 잘못 잡힌 문서는 `config/wiki_title_overrides.json`에 `"CSV 감염병명": "위키 문서 제목"`으로 적고
 `python -m scripts.build_index --refresh-titles`를 다시 실행합니다.
 
+## 챗봇 없이 실행 (키 없이 지도·통계·상세보기만)
+
+GMS 키·위키 User-Agent·색인 없이 **나라별 주의 감염병(지구본)**, **연령별 알아보기**, **감염병 상세보기**만 띄웁니다.
+
+```bash
+pip install -r requirements.txt
+KDCA_NO_CHAT=1 streamlit run ui/app.py          # Git Bash / macOS / Linux
+# PowerShell: $env:KDCA_NO_CHAT="1"; streamlit run ui/app.py
+```
+
+| 화면 | 챗봇 없는 모드에서 |
+| --- | --- |
+| 목차 | '감염병 질문하기' 숨김, 키 누락·색인 없음 점검 건너뜀 |
+| 홈 검색창 | 질문 대신 **감염병 이름 검색** → 상세보기로 이동 |
+| 나라 팝업 | 검역감염병 목록·상세보기만 ('여행 전 안내'는 LLM이 필요해 숨김) |
+| 상세보기 | 급수·신고 기준, 지정 국가, 연령·성별 인포그래픽, 유행 시기. 위키 요약은 **이미 받아 둔 본문이 있을 때만**, 챗봇 칸 없음 |
+
+화면에 쓰는 데이터는 키 없이 준비할 수 있습니다 (없으면 해당 칸에 '수집 전' 안내).
+
+| 데이터 | 키 없이 준비하는 방법 |
+| --- | --- |
+| 법정감염병 133종 | 저장소에 포함 (`data/seed/`) |
+| 나라별 검역감염병 `data/processed/country_watch.json` | 공공데이터포털 '검역관리지역정보' **파일데이터**를 내려받아 `python -m scripts.fetch_quarantine --csv <파일>` (API 방식만 키 필요), 또는 이미 만든 PC에서 파일 복사 |
+| 연령별·시기별 통계 `data/processed/age_stats.json` | 감염병포털 통계 CSV·xlsx를 `data/raw/stats/`에 넣고 `python -m scripts.build_age_stats` |
+| 상세보기 위키 요약 | `data/raw/wiki/pages/`·`data/processed/wiki_titles.json`을 이미 만든 PC에서 복사 (없으면 요약 칸 생략) |
+
 ## 3. 구조 (NF2005)
 
 | 영역 | 파일 | 하는 일 |
@@ -153,6 +179,7 @@ F2005 확인은 청크 설정을 500/100으로 바꿔 재색인한 뒤 원래 �
 
 | 날짜 | 내용 |
 | --- | --- |
+| 2026-10-24 | 챗봇 없이 실행(`KDCA_NO_CHAT=1`): 키·위키·색인 없이 지도·연령별·상세보기만, 검색창은 감염병 이름 검색, 질문하기·여행 전 안내·상세보기 챗봇 숨김 (테스트 추가) |
 | 2026-10-23 | 검증 도구: 체크리스트 맨 아래 상호 점검 피드백 칸이 채워져 있으면 27번(제출물)에서 상호 점검으로 인정, `--fill-only`로 다시 만들어도 직접 쓴 피드백·점검자 칸은 유지 |
 | 2026-10-23 | 수정: 한 감염병에 이름이 다른 통계 항목이 여럿(예: 엔테로바이러스 아형)이면 공공데이터 문서 ID가 겹쳐 새 색인에서 `DuplicateIDError` → 항목 이름을 ID에 넣고 같은 청크 ID는 하나만 넣음. 색인 테스트가 실제 수집 데이터를 읽지 않게 격리, `--fill-only`도 자동 테스트를 다시 실행 |
 | 2026-10-23 | 검증 도구: `--import-log`로 저장해 둔 콘솔 출력에서 결과 복원(증빙 파일은 evidence 폴더에서 다시 연결), `--fill-only`는 키 없이 실행 |

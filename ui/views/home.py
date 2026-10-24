@@ -15,7 +15,8 @@ from service.countries import country_from_event
 from service.runtime import DISCLAIMER
 from service.travel import travel_brief
 from ui.chat_core import is_quota_error, render_answer, render_evidence
-from ui.common import HOME_ISO, MAP_CONFIG, all_country_names, detail_button, log, runtime, search_box, watch
+from ui.common import (HOME_ISO, MAP_CONFIG, NO_CHAT, all_country_names, detail_button, log, runtime, search_box,
+                       watch)
 from ui.map_view import HIGH, LOW, NEUTRAL, SELECTED, build_world_map
 from ui.styles import INTRO_CSS
 
@@ -55,7 +56,8 @@ def close_panel() -> None:
 st.markdown("<div class='kd-hero'><h1 class='kd-hero-title'>법정감염병 안내 도우미</h1>"
             f"<p class='kd-hero-note'>{DISCLAIMER}</p></div>", unsafe_allow_html=True)
 with st.container(key="home_search"):
-    search_box("home_search_form", "감염병에 대해 무엇이든 물어보세요  (예: 홍역은 어떻게 전파되나요?)")
+    search_box("home_search_form", "감염병 이름으로 찾기  (예: 홍역, 뎅기열)" if NO_CHAT
+               else "감염병에 대해 무엇이든 물어보세요  (예: 홍역은 어떻게 전파되나요?)")
 sub = (f"질병관리청 검역관리지역 {w.as_of} 기준 · 지정 국가 {len(w.countries)}개국 · 지구본을 끌어 돌리고 나라를 눌러 보세요"
        if w.loaded else "검역관리지역 정보 수집 전입니다 (python -m scripts.fetch_quarantine)")
 st.markdown(f"<div class='kd-globe-sub'>{sub}</div>", unsafe_allow_html=True)
@@ -79,7 +81,7 @@ def globe(height: int) -> None:
 
 def travel_section(key: str, c) -> None:
     ids = [x.get("disease_id") for x in c.diseases if x.get("disease_id") in rt.by_id]
-    if not ids:
+    if not ids or NO_CHAT:          # 여행 전 안내는 LLM이 필요
         return
     if key not in ss["travel"]:
         if not st.button("✈️ 여행 전 안내 만들기 (근거 포함)", key=f"travel_{key}", width="stretch"):

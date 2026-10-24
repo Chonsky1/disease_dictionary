@@ -23,7 +23,7 @@ import streamlit as st  # noqa: E402
 
 from rag.llm import missing_keys  # noqa: E402
 from service.runtime import setup_logging  # noqa: E402
-from ui.common import PAGE_AGE, PAGE_CHAT, PAGE_DETAIL, PAGE_HOME, get_runtime  # noqa: E402
+from ui.common import NO_CHAT, PAGE_AGE, PAGE_CHAT, PAGE_DETAIL, PAGE_HOME, get_runtime  # noqa: E402
 from ui.styles import CSS  # noqa: E402
 
 log = logging.getLogger("kdca_rag")
@@ -38,6 +38,8 @@ pages = {
     "age": st.Page(PAGE_AGE, title="연령별 알아보기", url_path="age"),
     "detail": st.Page(PAGE_DETAIL, title="감염병 상세보기", url_path="detail"),
 }
+if NO_CHAT:          # 챗봇 없이: 질문하기 페이지를 빼고 키·색인 점검도 건너뜀
+    pages.pop("chat")
 nav = st.navigation(list(pages.values()), position="hidden")
 
 # ---- 목차 바 (항상 보임): 로고를 누르면 홈, 테두리 없는 글자 목차 ------------------------------------
@@ -45,9 +47,14 @@ with st.container(key="kd_nav", horizontal=True, vertical_alignment="center", ga
     with st.container(key="kd_logo", width="content"):
         st.page_link(pages["home"], label="법정감염병 안내")
     for k in ("home", "chat", "age"):
-        st.page_link(pages[k], label=pages[k].title)
+        if k in pages:
+            st.page_link(pages[k], label=pages[k].title)
 
 # ---- 사전 점검: 키 누락, 색인 없음 (F2012) ---------------------------------------------
+if NO_CHAT:
+    get_runtime()
+    nav.run()
+    st.stop()
 missing = missing_keys()
 if missing:
     st.error("필요한 환경변수가 설정되지 않았습니다: " + ", ".join(missing))
