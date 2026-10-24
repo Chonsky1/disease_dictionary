@@ -80,20 +80,6 @@ def build_runtime(settings: dict | None = None, llm=None, embeddings=None, wiki_
     return Runtime(settings, diseases, by_id, store, svc, build_graph(svc))
 
 
-@dataclass
-class LiteServices:
-    """챗봇 없는 모드의 services: 상세보기의 위키 요약만 (이미 받아 둔 본문 파일만 읽고 네트워크는 쓰지 않음)."""
-    wiki_titles: dict
-    collector: WikiCollector
-
-
-def build_lite_runtime() -> Runtime:
-    """KDCA_NO_CHAT=1: 모델·임베딩·Vector DB·위키 접속 없이 감염병 목록만 (store·graph는 None)."""
-    diseases = load_diseases(paths.DISEASES_CSV)
-    svc = LiteServices(load_titles(paths.WIKI_TITLES), WikiCollector(None, paths.WIKI_PAGES, paths.QUERY_CACHE))
-    return Runtime({}, diseases, {d.disease_id: d for d in diseases}, None, svc, None)
-
-
 def warmup(store) -> threading.Thread:
     """임베딩 연결을 미리 열어 둔다 (실측: 첫 근거 검색 2.4~2.7초 → 이후 0.2~0.3초). 질문을 기다리게 하지 않게 배경에서."""
     def job():

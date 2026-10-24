@@ -17,8 +17,6 @@ DATA = Path(os.getenv("KDCA_DATA_DIR") or ROOT / "data").resolve()
 SEED = ROOT / "data" / "seed"
 # KDCA_OFFLINE_DEMO=1: 가짜 모델·가짜 위키로 실행 (키·네트워크 없이 검증 도구가 동작하는지만 확인, scripts/offline_env.py)
 OFFLINE = os.getenv("KDCA_OFFLINE_DEMO") == "1"
-# KDCA_NO_CHAT=1: 챗봇 없이 지도·통계·상세보기만 (GMS 키·위키 User-Agent·색인 없이 실행). README '챗봇 없이 실행'
-NO_CHAT = os.getenv("KDCA_NO_CHAT") == "1"
 RAW = DATA / "raw"
 RAW_API = RAW / "api"
 RAW_CSV = RAW / "csv"

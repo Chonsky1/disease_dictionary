@@ -15,7 +15,7 @@ from service.age import profile, trend_summary
 from service.runtime import DISCLAIMER
 from ui.age_view import pyramid, trend_lines
 from ui.chat_core import ask, show_message
-from ui.common import CHART_CONFIG, NO_CHAT, PAGE_HOME, age_stats, log, runtime, watch
+from ui.common import CHART_CONFIG, PAGE_HOME, age_stats, log, runtime, watch
 
 rt = runtime()
 ss = st.session_state
@@ -47,8 +47,6 @@ def wiki_summary(disease_id: str) -> dict | None:
     svc = runtime().services
     info = svc.wiki_titles.get(disease_id) or {}
     if not info.get("pageid") or svc.collector is None:
-        return None
-    if NO_CHAT and not svc.collector.has_page(int(info["pageid"])):   # 챗봇 없는 모드는 받아 둔 본문만
         return None
     try:
         page = svc.collector.get_page(int(info["pageid"]), info["title"])
@@ -163,9 +161,6 @@ if trend:
     st.caption(f"단위: {t.unit}")
 
 # ---- 챗봇에게 물어보기 (이 페이지 안에서 대화) ------------------------------------------------
-if NO_CHAT:
-    st.caption("⚠️ " + DISCLAIMER)
-    st.stop()
 st.markdown("<div class='kd-section-title'>💬 챗봇에게 물어보기</div>", unsafe_allow_html=True)
 history = ss.setdefault("detail_chat", {}).setdefault(did, [])
 with st.container(key="detail_chat"):

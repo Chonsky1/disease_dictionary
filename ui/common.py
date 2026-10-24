@@ -28,12 +28,9 @@ CHART_CONFIG = {"displayModeBar": False, "scrollZoom": False}
 HOME_ISO = "KOR"
 
 
-NO_CHAT = paths.NO_CHAT        # 챗봇 없이 지도·통계·상세보기만 (KDCA_NO_CHAT=1)
-
-
 @st.cache_resource(show_spinner="모델과 색인을 불러오는 중")
 def get_runtime():
-    return runtime_mod.build_lite_runtime() if NO_CHAT else runtime_mod.build_runtime()
+    return runtime_mod.build_runtime()
 
 
 def runtime():
@@ -107,13 +104,6 @@ def search_box(key: str, placeholder: str, disease_id: str | None = None) -> Non
         q = c[0].text_input("질문", placeholder=placeholder, label_visibility="collapsed")
         sent = c[1].form_submit_button("→", width="stretch")
     if sent and q.strip():
-        if NO_CHAT:      # 챗봇이 없으면 이름으로 감염병을 찾아 상세보기로
-            did = disease_id or guess_disease(q, runtime(), use_search=False)
-            if did:
-                go_detail(did)
-            else:
-                st.warning("감염병 이름을 찾지 못했습니다. 감염병 이름을 넣어 다시 검색해 보세요 (예: 홍역, 뎅기열).")
-            return
         go_chat(q, disease_id)
 
 
